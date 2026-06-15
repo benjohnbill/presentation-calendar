@@ -4,6 +4,7 @@ import { db } from '@/db/client'
 import { availabilities, commits, sessions, notifications, members, topics } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { shouldFireProvisional, shouldCreateSession } from '@/domain/thresholds'
 import { computeSuggestedTime } from '@/domain/suggestedTime'
 import { formatWindow } from '@/domain/time'
@@ -15,9 +16,9 @@ function dateUrl(date: string) {
   return `${base}/?date=${date}`
 }
 
-export async function markAvailable(memberId: number, date: string) {
-  await db.insert(availabilities).values({ memberId, date }).onConflictDoNothing()
-
+// Evaluate one date's provisional threshold and fire the Discord ping once.
+// Extracted so it can run off the response path (see applyAvailability + after()).
+async function maybeFireProvisional(date: string) {
   const avail = await db.select().from(availabilities).where(eq(availabilities.date, date))
   const sess = await db.select().from(sessions).where(eq(sessions.date, date))
   const notified = await db
@@ -39,16 +40,35 @@ export async function markAvailable(memberId: number, date: string) {
     const mentionIds = all.filter((m) => availableIds.has(m.id)).map((m) => m.discordId)
     await postToDiscord(buildProvisional({ date, mentionIds, url: dateUrl(date) }))
   }
-
-  revalidatePath('/')
 }
 
-export async function unmarkAvailable(memberId: number, date: string) {
-  // cascade: removing availability also removes any commit (Commit ⊆ Available)
-  await db.delete(commits).where(and(eq(commits.memberId, memberId), eq(commits.date, date)))
-  await db.delete(availabilities).where(and(eq(availabilities.memberId, memberId), eq(availabilities.date, date)))
-  // provisional may silently break — no notification (by design)
+// Apply a whole batch of availability changes for one member in a single
+// round-trip. The calendar collects taps/drags locally and confirms them all at
+// once, so a multi-day selection costs one request instead of one per day
+// (server actions are dispatched one-at-a-time on the client, so per-tap writes
+// also serialize — batching removes that too).
+export async function applyAvailability(memberId: number, adds: string[], removes: string[]) {
+  // Removing availability cascades to any commit (Commit ⊆ Available).
+  for (const date of removes) {
+    await db.delete(commits).where(and(eq(commits.memberId, memberId), eq(commits.date, date)))
+    await db.delete(availabilities).where(and(eq(availabilities.memberId, memberId), eq(availabilities.date, date)))
+  }
+
+  if (adds.length > 0) {
+    await db
+      .insert(availabilities)
+      .values(adds.map((date) => ({ memberId, date })))
+      .onConflictDoNothing()
+  }
+
+  // Refresh the UI immediately; the Discord pings must not block the response.
   revalidatePath('/')
+
+  if (adds.length > 0) {
+    after(async () => {
+      for (const date of adds) await maybeFireProvisional(date)
+    })
+  }
 }
 
 export async function commit(

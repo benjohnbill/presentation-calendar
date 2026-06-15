@@ -7,7 +7,7 @@ import { MonthCalendar } from './MonthCalendar'
 import { DateDetail } from './DateDetail'
 import { SessionsView } from './SessionsView'
 import { CalendarIcon, ClockIcon, CheckCircleIcon } from './icons'
-import { markAvailable, unmarkAvailable, commit, uncommit, addTopic } from '../actions'
+import { applyAvailability, commit, uncommit, addTopic } from '../actions'
 import type { MonthAnchor } from '@/lib/calendar'
 import { buildColorMap } from '@/lib/calendar'
 
@@ -73,11 +73,9 @@ export function AppShell(props: {
           colorMap={colorMap}
           sessionDates={sessionSet}
           myId={myId}
-          onToggle={async (d) => {
-            const mine = (props.availByDate[d] ?? []).includes(myId)
-            if (mine) await unmarkAvailable(myId, d)
-            else await markAvailable(myId, d)
-            router.refresh()
+          onApply={async (adds, removes) => {
+            // revalidatePath('/') inside the action refreshes the RSC; no router.refresh needed.
+            await applyAvailability(myId, adds, removes)
           }}
           onOpenTimetable={goTimetable}
           canPrev={monthIdx > 0}
