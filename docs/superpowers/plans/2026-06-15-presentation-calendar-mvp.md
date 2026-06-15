@@ -1539,3 +1539,18 @@ Push to `main` → Vercel auto-deploys. Open the deployed URL; repeat the smoke 
 **3. Type consistency:** `TimeWindow {start,end}` consistent across `time.ts`/`suggestedTime.ts`/actions/UI; `DiscordMessage {content, allowed_mentions:{users}}` consistent across `messages.ts`/`discord.ts`; action signatures `(memberId, date, ...)` consistent with `CalendarClient` callers. ✓
 
 **Known soft spots (acceptable for MVP, flagged):** the 4-identity smoke test needs multiple browsers (honor-system identity); timetable hour axis (12:00–24:00) and exact heatmap colors are UX details to refine in the frontend-design pass; concurrent-write race on threshold is guarded by the `notifications` unique constraint but the count read is not transactional (acceptable at 5-user scale).
+
+---
+
+## Amendment (2026-06-15, post-build) — Late-join notification
+
+Surfaced by `final-check`: the agreed notification catalog included a *late-join* event that
+was missing from the original plan. Added directly to the built code:
+
+- `notify/messages.ts` — `buildLateJoin({ date, joinerName, count, suggested, url })`: a **quiet**
+  message (`allowed_mentions: { users: [] }` — no ping) naming the joiner, the new count, and the
+  refreshed suggested time. Covered by `notify/messages.test.ts`.
+- `app/actions.ts` `commit()` — detects a **new** committer (no prior commit row for that date)
+  vs. an existing one editing their time. If new **and** a session already existed, it fires the
+  quiet late-join message. A pure time-edit by an existing committer fires nothing (by design).
+

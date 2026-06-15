@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { shouldFireProvisional, shouldCreateSession } from '@/domain/thresholds'
 import { computeSuggestedTime } from '@/domain/suggestedTime'
 import { formatWindow } from '@/domain/time'
-import { buildProvisional, buildSessionCreated } from '@/notify/messages'
+import { buildProvisional, buildSessionCreated, buildLateJoin } from '@/notify/messages'
 import { postToDiscord } from '@/notify/discord'
 
 function dateUrl(date: string) {
@@ -58,6 +58,14 @@ export async function commit(
 ) {
   // Commit ⊆ Available: ensure availability exists
   await db.insert(availabilities).values({ memberId, date }).onConflictDoNothing()
+
+  // Distinguish a NEW committer (potential late join) from an existing one editing their time.
+  const existing = await db
+    .select()
+    .from(commits)
+    .where(and(eq(commits.memberId, memberId), eq(commits.date, date)))
+  const isNewCommitter = existing.length === 0
+
   await db
     .insert(commits)
     .values({ memberId, date, timeStart: window.start, timeEnd: window.end })
@@ -68,8 +76,9 @@ export async function commit(
 
   const comm = await db.select().from(commits).where(eq(commits.date, date))
   const sess = await db.select().from(sessions).where(eq(sessions.date, date))
+  const sessionExisted = sess.length > 0
 
-  if (shouldCreateSession({ commitCount: comm.length, sessionExists: sess.length > 0 })) {
+  if (shouldCreateSession({ commitCount: comm.length, sessionExists: sessionExisted })) {
     await db.insert(sessions).values({ date }).onConflictDoNothing()
     await db.insert(notifications).values({ date, eventType: 'session_created' }).onConflictDoNothing()
 
@@ -80,6 +89,15 @@ export async function commit(
     const suggested = computeSuggestedTime(windows, 4)
     const mentionIds = comm.map((c) => byId.get(c.memberId)?.discordId).filter(Boolean) as string[]
     await postToDiscord(buildSessionCreated({ date, lines, suggested, mentionIds, url: dateUrl(date) }))
+  } else if (isNewCommitter && sessionExisted) {
+    // Late join: a new person commits to an already-created session. Quiet (no ping),
+    // showing who joined, the new count, and the (possibly shifted) suggested time.
+    const all = await db.select().from(members)
+    const byId = new Map(all.map((m) => [m.id, m]))
+    const windows = comm.map((c) => ({ start: c.timeStart, end: c.timeEnd }))
+    const suggested = computeSuggestedTime(windows, 4)
+    const joinerName = byId.get(memberId)?.name ?? '?'
+    await postToDiscord(buildLateJoin({ date, joinerName, count: comm.length, suggested, url: dateUrl(date) }))
   }
 
   revalidatePath('/')

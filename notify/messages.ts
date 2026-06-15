@@ -40,3 +40,20 @@ export function buildReminder(a: { date: string; mentionIds: string[]; url: stri
     allowed_mentions: { users: a.mentionIds },
   }
 }
+
+// Late join: a NEW member commits to an already-created session.
+// Quiet by design — no pings (empty allowed_mentions). Shows the joiner, the new
+// count, and the (possibly shifted) suggested time so people see the picture change.
+export function buildLateJoin(a: {
+  date: string
+  joinerName: string
+  count: number
+  suggested: { start: string; end: string } | null
+  url: string
+}): DiscordMessage {
+  const suggestedLine = a.suggested ? ` ✨ 겹치는 시간 갱신: ${a.suggested.start}~${a.suggested.end}` : ''
+  return {
+    content: `🙋 ${a.joinerName}도 합류 (이제 ${a.count}명).${suggestedLine}\n🔗 ${a.url}`,
+    allowed_mentions: { users: [] },
+  }
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildProvisional, buildSessionCreated, buildReminder } from './messages'
+import { buildProvisional, buildSessionCreated, buildReminder, buildLateJoin } from './messages'
 
 const url = 'https://app.example/d/2026-06-20'
 
@@ -42,5 +42,22 @@ describe('buildReminder', () => {
     const msg = buildReminder({ date: '2026-06-20', mentionIds: ['111'], url })
     expect(msg.content).toContain('2026-06-20')
     expect(msg.allowed_mentions).toEqual({ users: ['111'] })
+  })
+})
+
+describe('buildLateJoin', () => {
+  it('is quiet (no pings), names the joiner + count, shows updated suggested time', () => {
+    const msg = buildLateJoin({
+      date: '2026-06-20', joinerName: '민지', count: 5, suggested: { start: '20:00', end: '22:00' }, url,
+    })
+    expect(msg.content).toContain('민지')
+    expect(msg.content).toContain('5명')
+    expect(msg.content).toContain('20:00~22:00')
+    expect(msg.content).toContain(url)
+    expect(msg.allowed_mentions).toEqual({ users: [] })
+  })
+  it('omits the suggested-time line when null', () => {
+    const msg = buildLateJoin({ date: '2026-06-20', joinerName: '민지', count: 5, suggested: null, url })
+    expect(msg.content).not.toContain('겹치는 시간')
   })
 })
