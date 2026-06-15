@@ -39,7 +39,6 @@ export function AppShell(props: {
   const router = useRouter()
   const { id: myId, ready, pick } = useIdentity()
   const [view, setView] = useState<View>('agree')
-  const [monthIdx, setMonthIdx] = useState(0)
   const [pickerOpen, setPickerOpen] = useState(false)
 
   const colorMap = buildColorMap(props.members.map((m) => m.id))
@@ -76,7 +75,7 @@ export function AppShell(props: {
     <>
       {view === 'agree' && (
         <MonthCalendar
-          anchor={props.monthAnchors[monthIdx]}
+          anchors={props.monthAnchors}
           today={props.today}
           availByDate={props.availByDate}
           members={props.members}
@@ -88,10 +87,6 @@ export function AppShell(props: {
             await applyAvailability(myId, adds, removes)
           }}
           onOpenTimetable={goTimetable}
-          canPrev={monthIdx > 0}
-          canNext={monthIdx < props.monthAnchors.length - 1}
-          onPrev={() => setMonthIdx((i) => Math.max(0, i - 1))}
-          onNext={() => setMonthIdx((i) => Math.min(props.monthAnchors.length - 1, i + 1))}
         />
       )}
 

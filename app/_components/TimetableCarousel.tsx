@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react'
 import { DateDetail } from './DateDetail'
 import { ClockIcon } from './icons'
+import { SNAP_MS, SNAP_EASE, settleIndex } from '@/lib/swipe'
 
 type Member = { id: number; name: string }
 type CommitRow = { memberId: number; timeStart: string | null; timeEnd: string | null }
@@ -13,11 +14,11 @@ type Day = {
   suggested: { start: string; end: string } | null
 }
 
-const SWIPE = 60 // px past which a horizontal drag flips to the next/prev day
 const mmdd = (d: string) => `${Number(d.slice(5, 7))}월 ${Number(d.slice(8, 10))}일`
 
 // A swipeable carousel over the days that qualify for a timetable (THRESHOLD+
-// available). Opens on the nearest day; swipe / chevrons / dots move between them.
+// available). Opens on the nearest day; the track follows the finger so the
+// adjacent day peeks in, then settles with an ease-out snap.
 export function TimetableCarousel({
   days, members, myId, initialDate, onCommit, onUncommit, onAddTopic, onGoCalendar,
 }: {
@@ -32,8 +33,9 @@ export function TimetableCarousel({
 }) {
   const start = initialDate ? days.findIndex((d) => d.date === initialDate) : 0
   const [idx, setIdx] = useState(start < 0 ? 0 : start)
-  const [dx, setDx] = useState(0) // live horizontal drag offset
-  const drag = useRef<{ x0: number; y0: number; active: boolean } | null>(null)
+  const [dx, setDx] = useState(0) // live horizontal drag offset (px)
+  const [animating, setAnimating] = useState(false)
+  const drag = useRef<{ x0: number; y0: number; active: boolean; lastX: number; lastT: number; vx: number } | null>(null)
   const vpRef = useRef<HTMLDivElement>(null)
 
   if (days.length === 0) {
@@ -50,12 +52,17 @@ export function TimetableCarousel({
   }
 
   const cur = Math.min(idx, days.length - 1) // clamp in case the day set shrank
-  const go = (i: number) => setIdx(Math.max(0, Math.min(days.length - 1, i)))
+  const go = (i: number) => {
+    setAnimating(true)
+    setDx(0)
+    setIdx(Math.max(0, Math.min(days.length - 1, i)))
+  }
 
   // Horizontal swipe only; touch-action: pan-y leaves vertical scrolling to the browser.
   const onPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest('input,textarea,button,select,label,a')) return
-    drag.current = { x0: e.clientX, y0: e.clientY, active: false }
+    setAnimating(false)
+    drag.current = { x0: e.clientX, y0: e.clientY, active: false, lastX: e.clientX, lastT: performance.now(), vx: 0 }
   }
   const onPointerMove = (e: React.PointerEvent) => {
     const d = drag.current
@@ -64,21 +71,28 @@ export function TimetableCarousel({
     const my = e.clientY - d.y0
     if (!d.active) {
       if (Math.abs(my) > 12 && Math.abs(my) > Math.abs(mx)) { drag.current = null; return } // vertical scroll wins
-      if (Math.abs(mx) > 12) { d.active = true; vpRef.current?.setPointerCapture(e.pointerId) }
+      if (Math.abs(mx) > 10) { d.active = true; vpRef.current?.setPointerCapture(e.pointerId) }
       else return
     }
-    // rubber-band resistance at the ends
+    const now = performance.now()
+    const dt = now - d.lastT
+    if (dt > 0) d.vx = (e.clientX - d.lastX) / dt
+    d.lastX = e.clientX
+    d.lastT = now
     const atEnd = (cur === 0 && mx > 0) || (cur === days.length - 1 && mx < 0)
-    setDx(atEnd ? mx * 0.3 : mx)
+    setDx(atEnd ? mx * 0.35 : mx) // rubber-band at the ends
   }
-  const onPointerUp = () => {
+  const onPointerUp = (e: React.PointerEvent) => {
     const d = drag.current
     drag.current = null
     if (d?.active) {
-      if (dx < -SWIPE) go(cur + 1)
-      else if (dx > SWIPE) go(cur - 1)
+      const w = vpRef.current?.clientWidth ?? 1
+      setAnimating(true)
+      setDx(0)
+      setIdx(settleIndex(cur, days.length, e.clientX - d.x0, d.vx, w))
+    } else {
+      setDx(0)
     }
-    setDx(0)
   }
 
   return (
@@ -125,11 +139,11 @@ export function TimetableCarousel({
           className="flex items-start"
           style={{
             transform: `translateX(calc(${-cur * 100}% + ${dx}px))`,
-            transition: dx === 0 ? 'transform .2s ease' : 'none',
+            transition: animating ? `transform ${SNAP_MS}ms ${SNAP_EASE}` : 'none',
           }}
         >
-          {days.map((day) => (
-            <div key={day.date} className="w-full shrink-0 px-0.5">
+          {days.map((day, i) => (
+            <div key={day.date} className="w-full shrink-0 px-0.5" inert={i !== cur}>
               <DateDetail
                 date={day.date}
                 members={members}
