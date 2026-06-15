@@ -297,48 +297,12 @@ export function MonthCalendar({
 
   return (
     <div className="flex h-full flex-col">
-      {/* month nav (fixed; the grid below is what swipes) */}
-      <div className="mb-3 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => goMonth(monthIdx - 1)}
-          disabled={monthIdx === 0}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-100 disabled:opacity-25"
-          aria-label="이전 달"
-        >
-          ‹
-        </button>
-        <h2 className="text-lg font-bold tracking-tight sm:text-xl">{active.label}</h2>
-        <button
-          type="button"
-          onClick={() => goMonth(monthIdx + 1)}
-          disabled={monthIdx === anchors.length - 1}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-100 disabled:opacity-25"
-          aria-label="다음 달"
-        >
-          ›
-        </button>
-      </div>
-
-      {/* weekday header (fixed; shared across all months) */}
-      <div className="mb-1 grid grid-cols-7">
-        {WEEKDAYS.map((w, i) => (
-          <div
-            key={w}
-            className={`pb-1 text-center text-[11px] font-medium sm:text-xs ${
-              i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-stone-400'
-            }`}
-          >
-            {w}
-          </div>
-        ))}
-      </div>
-
-      {/* swipeable month track — adjacent months peek in as you drag.
-          touch-action none so a touch drag swipes / paints instead of scrolling. */}
+      {/* The whole calendar is the swipe surface — the month label, weekday
+          header, padding and past cells all start a month swipe; only the grid
+          track below translates. touch-action none so a drag swipes/paints, not scrolls. */}
       <div
         ref={surfaceRef}
-        className="min-h-0 flex-1 overflow-hidden"
+        className="flex min-h-0 flex-1 select-none flex-col"
         style={{ touchAction: 'none' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -346,20 +310,60 @@ export function MonthCalendar({
         onPointerCancel={onPointerCancel}
         onContextMenu={(e) => e.preventDefault()}
       >
-        <div
-          className="flex h-full select-none"
-          style={{
-            transform: `translateX(calc(${-monthIdx * 100}% + ${swipeDx}px))`,
-            transition: animating ? `transform ${SNAP_MS}ms ${SNAP_EASE}` : 'none',
-          }}
-        >
-          {anchors.map((a, i) => (
-            <div key={a.label} className="w-full shrink-0" inert={i !== monthIdx}>
-              <div className="grid h-full grid-cols-7 gap-1 sm:gap-1.5">
-                {monthGrid(a.year, a.month0).map((d, idx) => renderCell(d, idx))}
-              </div>
+        {/* month nav */}
+        <div className="mb-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => goMonth(monthIdx - 1)}
+            disabled={monthIdx === 0}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-100 disabled:opacity-25"
+            aria-label="이전 달"
+          >
+            ‹
+          </button>
+          <h2 className="text-lg font-bold tracking-tight sm:text-xl">{active.label}</h2>
+          <button
+            type="button"
+            onClick={() => goMonth(monthIdx + 1)}
+            disabled={monthIdx === anchors.length - 1}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-100 disabled:opacity-25"
+            aria-label="다음 달"
+          >
+            ›
+          </button>
+        </div>
+
+        {/* weekday header (shared across all months) */}
+        <div className="mb-1 grid grid-cols-7">
+          {WEEKDAYS.map((w, i) => (
+            <div
+              key={w}
+              className={`pb-1 text-center text-[11px] font-medium sm:text-xs ${
+                i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-stone-400'
+              }`}
+            >
+              {w}
             </div>
           ))}
+        </div>
+
+        {/* month track — adjacent months peek in as you drag */}
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <div
+            className="flex h-full"
+            style={{
+              transform: `translateX(calc(${-monthIdx * 100}% + ${swipeDx}px))`,
+              transition: animating ? `transform ${SNAP_MS}ms ${SNAP_EASE}` : 'none',
+            }}
+          >
+            {anchors.map((a, i) => (
+              <div key={a.label} className="w-full shrink-0" inert={i !== monthIdx}>
+                <div className="grid h-full grid-cols-7 gap-1 sm:gap-1.5">
+                  {monthGrid(a.year, a.month0).map((d, idx) => renderCell(d, idx))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
