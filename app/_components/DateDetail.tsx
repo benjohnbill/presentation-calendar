@@ -13,6 +13,8 @@ type Props = {
   topics: TopicRow[]
   suggested: { start: string; end: string } | null
   myId: number
+  colorMap: Record<number, string>
+  inkMap: Record<number, string>
   onCommit: (window: { start: string | null; end: string | null }) => void
   onUncommit: () => void
   onAddTopic: (text: string) => void
@@ -30,7 +32,7 @@ const clamp = (n: number) => Math.max(DAY_START, Math.min(DAY_END, n))
 const pct = (min: number) => ((clamp(min) - DAY_START) / SPAN) * 100
 
 export function DateDetail({
-  date, members, commits, topics, suggested, myId, onCommit, onUncommit, onAddTopic,
+  date, members, commits, topics, suggested, myId, colorMap, inkMap, onCommit, onUncommit, onAddTopic,
 }: Props) {
   const [start, setStart] = useState('19:00')
   const [end, setEnd] = useState('')
@@ -45,10 +47,10 @@ export function DateDetail({
   const bandBottom = suggested ? pct(toMin(suggested.end, DAY_END)) : 0
 
   return (
-    <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+    <section className="rounded-2xl border border-hairline bg-white p-4 sm:p-5">
       <header className="mb-4 flex items-baseline justify-between">
         <h2 className="text-base font-semibold tracking-tight sm:text-lg">{mmdd} 시간표</h2>
-        <span className="text-xs text-stone-400">{commits.length}명 참석</span>
+        <span className="text-xs text-muted">{commits.length}명 참석</span>
       </header>
 
       {/* timetable: time axis + a column per member, overlap band across all */}
@@ -77,9 +79,8 @@ export function DateDetail({
             {members.map((m) => (
               <div
                 key={m.id}
-                className={`min-w-0 flex-1 truncate px-0.5 text-center text-[11px] font-medium sm:text-xs ${
-                  m.id === myId ? 'text-orange-600' : byMember.has(m.id) ? 'text-stone-700' : 'text-stone-300'
-                }`}
+                className="min-w-0 flex-1 truncate px-0.5 text-center text-[11px] font-semibold sm:text-xs"
+                style={{ color: m.id === myId ? '#0066cc' : byMember.has(m.id) ? inkMap[m.id] : '#c7c7cc' }}
               >
                 {m.name}
               </div>
@@ -87,7 +88,7 @@ export function DateDetail({
           </div>
 
           {/* chart */}
-          <div className="relative h-56 overflow-hidden rounded-xl border border-stone-200 bg-stone-50/60 sm:h-72">
+          <div className="relative h-56 overflow-hidden rounded-xl border border-hairline bg-[#fafafc] sm:h-72">
             {/* hour gridlines */}
             {HOUR_TICKS.map((h) => (
               <div
@@ -109,7 +110,7 @@ export function DateDetail({
             {/* overlap band — the signature: when >=4 are free at once */}
             {suggested && bandBottom > bandTop && (
               <div
-                className="pointer-events-none absolute inset-x-0 border-y-2 border-dashed border-emerald-500/70 bg-emerald-400/15"
+                className="pointer-events-none absolute inset-x-0 border-y-2 border-accent bg-accent/10"
                 style={{ top: `${bandTop}%`, height: `${bandBottom - bandTop}%` }}
                 aria-label={`다 같이 가능한 시간 ${suggested.start}~${suggested.end}`}
               />
@@ -130,9 +131,8 @@ export function DateDetail({
                   style={{ left: `${(i * 100) / n}%`, width: `${100 / n}%`, top: `${top}%`, height: `${bottom - top}%` }}
                 >
                   <div
-                    className={`h-full w-full rounded-md ${
-                      isMe ? 'bg-orange-500' : 'bg-orange-400/85'
-                    } shadow-[0_1px_3px_rgba(249,115,22,0.35)] ring-1 ring-orange-500/30`}
+                    className="h-full w-full rounded-md"
+                    style={{ backgroundColor: colorMap[m.id], opacity: isMe ? 1 : 0.88 }}
                   />
                 </div>
               )
@@ -157,8 +157,8 @@ export function DateDetail({
       </div>
 
       {suggested ? (
-        <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
-          <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500 align-middle" />
+        <p className="mt-4 rounded-lg bg-accent-soft px-3 py-2 text-sm font-medium text-[#0a4f9e]">
+          <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-accent align-middle" />
           다 같이 되는 시간 <span className="font-semibold">{suggested.start}~{suggested.end}</span> — 이때 어때요?
         </p>
       ) : (
@@ -177,7 +177,7 @@ export function DateDetail({
             type="checkbox"
             checked={anytime}
             onChange={(e) => setAnytime(e.target.checked)}
-            className="h-4 w-4 accent-orange-500"
+            className="h-4 w-4 accent-[#0066cc]"
           />
           시간무관 (아무 때나 OK)
         </label>
@@ -187,14 +187,14 @@ export function DateDetail({
               type="time"
               value={start}
               onChange={(e) => setStart(e.target.value)}
-              className="rounded-lg border border-stone-300 px-2.5 py-1.5 tabular-nums focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+              className="rounded-lg border border-stone-300 px-2.5 py-1.5 tabular-nums focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
             />
             <span className="text-stone-400">~</span>
             <input
               type="time"
               value={end}
               onChange={(e) => setEnd(e.target.value)}
-              className="rounded-lg border border-stone-300 px-2.5 py-1.5 tabular-nums focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+              className="rounded-lg border border-stone-300 px-2.5 py-1.5 tabular-nums focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
             />
             <span className="text-xs text-stone-400">끝 시간 비우면 &ldquo;{start || '19:00'}~&rdquo;</span>
           </div>
@@ -203,7 +203,7 @@ export function DateDetail({
           <button
             type="button"
             onClick={() => onCommit(anytime ? { start: null, end: null } : { start: start || null, end: end || null })}
-            className="rounded-xl bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 active:scale-[0.98]"
+            className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white transition hover:bg-accent-strong active:scale-[0.97]"
           >
             {iCommitted ? '시간 수정' : '하자 (참석)'}
           </button>
@@ -211,7 +211,7 @@ export function DateDetail({
             <button
               type="button"
               onClick={onUncommit}
-              className="rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-50"
+              className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-50 active:scale-[0.97]"
             >
               참석 취소
             </button>
@@ -247,7 +247,7 @@ export function DateDetail({
               }
             }}
             placeholder="뭐 발표할지 (선택)"
-            className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-1.5 text-sm focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+            className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-1.5 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
           />
           <button
             type="button"

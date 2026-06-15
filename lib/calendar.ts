@@ -48,11 +48,27 @@ export function todayKst(today: Date): string {
   return toKstDateString(today)
 }
 
-// Distinct, vivid colours assigned to members by their position in the roster.
-const PALETTE = ['#f97316', '#0ea5e9', '#8b5cf6', '#10b981', '#f43f5e', '#eab308', '#14b8a6', '#ec4899', '#6366f1', '#84cc16']
+// Member colours: tone-aligned (lowered-saturation) hues so several can sit
+// together without reading as a crayon box, while staying distinct per person.
+// PALETTE is the bar/indicator colour; PALETTE_INK is the darker on-tint text
+// colour for the calendar's low-area "tint + left bar" band treatment.
+const PALETTE = ['#d98a4f', '#5b9bc4', '#8b7ec0', '#5fa888', '#cc6f86', '#c9a14e', '#4fa3a0', '#c47fb0', '#7283c4', '#8fae5d']
+const PALETTE_INK = ['#a85c1d', '#2d6f9e', '#67529c', '#2f7d5a', '#a83e57', '#8a6a1e', '#2c6e6b', '#9a4f86', '#495aa0', '#5e7a32']
 
 export function buildColorMap(memberIds: number[]): Record<number, string> {
   const map: Record<number, string> = {}
   memberIds.forEach((id, i) => (map[id] = PALETTE[i % PALETTE.length]))
   return map
+}
+
+export function buildInkMap(memberIds: number[]): Record<number, string> {
+  const map: Record<number, string> = {}
+  memberIds.forEach((id, i) => (map[id] = PALETTE_INK[i % PALETTE_INK.length]))
+  return map
+}
+
+// Translucent fill of a member colour, for the calendar band's tint background.
+export function tintOf(hex: string, alpha: number): string {
+  const n = parseInt(hex.slice(1), 16)
+  return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
 }

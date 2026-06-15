@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>발표 캘린더 — 시간표 · 세션 (V4 톤)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+* { box-sizing:border-box; margin:0; padding:0; }
+:root { --m1:#f97316; --m2:#0ea5e9; --m3:#8b5cf6; --m4:#10b981; --m5:#f43f5e;
+  --blue:#0066cc; --blue-h:#0071e3; --ink:#1d1d1f; --muted:#86868b; --hair:#e8e8ec; }
+body { background:#e9e9ec; color:var(--ink); font-family:'Inter', system-ui, sans-serif; }
+
+.toggle { position:sticky; top:0; z-index:50; display:flex; gap:8px; align-items:center;
+  padding:14px 20px; background:#1c1c1e; }
+.toggle b { color:#fff; font-weight:600; font-size:14px; margin-right:8px; letter-spacing:-.01em; }
+.toggle button { font-weight:500; font-size:13px; padding:8px 16px; border-radius:999px; border:0;
+  background:#3a3a3c; color:#d2d2d7; cursor:pointer; transition:transform .12s; }
+.toggle button.on { background:#fff; color:#1c1c1e; }
+.toggle button:active { transform:scale(.96); }
+.toggle .cap { color:var(--muted); font-size:12px; margin-left:auto; }
+
+.stage { display:flex; justify-content:flex-start; padding:28px; }
+.app { display:flex; width:1080px; min-height:720px; border-radius:18px; overflow:hidden; }
+
+/* ---- near-black sidebar (V4 chrome) ---- */
+.side { width:228px; flex-shrink:0; display:flex; flex-direction:column; padding:20px 14px; background:#1d1d1f; }
+.brand { padding:6px 10px 22px; }
+.brand h1 { font-size:18px; font-weight:700; letter-spacing:-.022em; color:#f5f5f7; }
+.brand p { font-size:12px; margin-top:3px; color:var(--muted); }
+.nav { display:flex; flex-direction:column; gap:4px; }
+.nav a { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:11px;
+  font-size:14px; font-weight:500; color:#d2d2d7; cursor:pointer; transition:transform .12s; }
+.nav a:active { transform:scale(.97); }
+.nav a.on { background:rgba(0,102,204,.18); color:#2997ff; }
+.nav .ico { width:18px; height:18px; opacity:.85; }
+.me { margin-top:auto; }
+.me button { width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
+  border:1px solid #3a3a3c; background:#2a2a2c; color:#f5f5f7; border-radius:999px; padding:9px 12px;
+  font-size:13px; font-weight:500; cursor:pointer; }
+
+/* ---- main / parchment ---- */
+.main { flex:1; padding:30px 34px; background:#f5f5f7; }
+.screen { display:none; }
+.screen.show { display:block; }
+
+/* ===== shared card ===== */
+.card { background:#fff; border:1px solid var(--hair); border-radius:18px; padding:24px; }
+.card-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:20px; }
+.card-head h2 { font-size:24px; font-weight:600; letter-spacing:-.022em; }
+.card-head .meta { font-size:14px; color:var(--muted); }
+
+/* ===== timetable chart ===== */
+.tt { display:flex; gap:8px; }
+.axis { width:34px; flex-shrink:0; }
+.axis .spacer { height:20px; }
+.axis .track { position:relative; height:300px; }
+.axis .tick { position:absolute; right:4px; transform:translateY(-50%); font-size:11px;
+  color:var(--muted); font-variant-numeric:tabular-nums; }
+.cols { flex:1; min-width:0; }
+.names { display:flex; height:20px; }
+.names .nm { flex:1; min-width:0; text-align:center; font-size:13px; font-weight:600;
+  letter-spacing:-.01em; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.chart { position:relative; height:300px; border:1px solid var(--hair); border-radius:12px;
+  background:#fafafc; overflow:hidden; }
+.grid-h { position:absolute; left:0; right:0; border-top:1px solid #eeeef1; }
+.sep { position:absolute; top:0; bottom:0; border-left:1px solid #f0f0f2; }
+.overlap { position:absolute; left:0; right:0; background:rgba(0,102,204,.1);
+  border-top:2px solid var(--blue); border-bottom:2px solid var(--blue); }
+.bar { position:absolute; padding:0 5px; }
+.bar > span { display:block; height:100%; border-radius:7px; opacity:.92; }
+.wins { display:flex; margin-top:6px; }
+.wins .w { flex:1; min-width:0; text-align:center; font-size:11px; color:var(--muted);
+  font-variant-numeric:tabular-nums; overflow:hidden; white-space:nowrap; }
+
+.suggest { margin-top:20px; display:flex; align-items:center; gap:8px; padding:12px 16px;
+  background:#eef5fc; border-radius:12px; font-size:15px; font-weight:500; color:#0a4f9e; }
+.suggest .dot { width:8px; height:8px; border-radius:999px; background:var(--blue); flex-shrink:0; }
+.suggest b { font-weight:700; }
+
+.sect { margin-top:22px; padding-top:20px; border-top:1px solid var(--hair); }
+.sect > p.lbl { font-size:15px; font-weight:600; margin-bottom:12px; }
+.check { display:flex; align-items:center; gap:8px; font-size:15px; color:#424245; margin-bottom:12px; }
+.check input { width:16px; height:16px; accent-color:var(--blue); }
+.times { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.times input { border:1px solid #d2d2d7; border-radius:10px; padding:8px 12px; font:inherit;
+  font-size:15px; font-variant-numeric:tabular-nums; }
+.times .til { color:var(--muted); }
+.btn-row { display:flex; gap:10px; margin-top:16px; }
+.btn-blue { border:0; background:var(--blue); color:#fff; border-radius:999px; padding:10px 22px;
+  font-size:15px; font-weight:600; cursor:pointer; transition:transform .12s; }
+.btn-ghost { border:1px solid #d2d2d7; background:#fff; color:#424245; border-radius:999px;
+  padding:10px 18px; font-size:15px; font-weight:500; cursor:pointer; transition:transform .12s; }
+.btn-blue:active, .btn-ghost:active { transform:scale(.97); }
+.topics { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+.topic { display:flex; align-items:center; gap:8px; font-size:15px; }
+.topic .who { font-weight:600; }
+.topic .sep2 { color:var(--muted); }
+.topic-add { display:flex; gap:10px; }
+.topic-add input { flex:1; border:1px solid #d2d2d7; border-radius:10px; padding:9px 14px;
+  font:inherit; font-size:15px; }
+
+/* ===== sessions ===== */
+.sessions-wrap { max-width:520px; }
+.sess-list { display:flex; flex-direction:column; gap:10px; }
+.sess { display:flex; align-items:center; gap:14px; padding:16px 18px; border-radius:14px;
+  background:#eef5fc; border:1px solid #cfe0f5; }
+.sess .ck { width:34px; height:34px; border-radius:999px; background:var(--blue); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.sess .d { font-size:17px; font-weight:600; color:#0a3f7e; }
+.past-head { font-size:14px; font-weight:600; color:var(--muted); margin:30px 0 10px; }
+.past-list { display:flex; flex-direction:column; gap:2px; }
+.past-item { padding:9px 14px; font-size:15px; color:#a1a1a6; }
+</style>
+</head>
+<body>
+  <div class="toggle">
+    <b>발표 캘린더 · 시간표/세션 (V4 톤)</b>
+    <button data-s="timetable" class="on">시간표</button>
+    <button data-s="sessions">다가오는 세션</button>
+    <span class="cap">6월 20일 세션 · 5명 참석</span>
+  </div>
+
+  <div class="stage">
+    <div class="app">
+      <aside class="side">
+        <div class="brand"><h1>발표 캘린더</h1><p>4명이면 세션이 떠요</p></div>
+        <nav class="nav" id="nav"></nav>
+        <div class="me"><button><span style="opacity:.55">나:</span> 진근 ▾</button></div>
+      </aside>
+      <main class="main">
+        <div class="screen timetable show" id="screen-timetable"></div>
+        <div class="screen sessions" id="screen-sessions"></div>
+      </main>
+    </div>
+  </div>
+
+<script>
+const MYID = 1;
+const COMMITS = [
+  {id:1, name:'진근', c:'var(--m1)', start:'19:00', end:'23:00'},
+  {id:2, name:'혁호', c:'var(--m2)', start:'19:30', end:'22:00'},
+  {id:3, name:'경한', c:'var(--m3)', start:null,   end:null},   // 시간무관
+  {id:4, name:'준형', c:'var(--m4)', start:'20:00', end:null},   // ~끝없음
+  {id:5, name:'유빈', c:'var(--m5)', start:'18:00', end:'22:00'},
+];
+const SUGGEST = {start:'20:00', end:'22:00'};
+const TOPICS = [
+  {who:'진근', text:'RSC 데이터 패칭 패턴 정리'},
+  {who:'유빈', text:'Drizzle 마이그레이션 회고'},
+];
+const TICKS = [12,14,16,18,20,22,24];
+const DS=720, DE=1440, SPAN=720, N=COMMITS.length;
+const toMin=(s,f)=> s ? (+s.slice(0,2))*60 + (+s.slice(3,5)) : f;
+const clamp=n=>Math.max(DS,Math.min(DE,n));
+const pct=m=>((clamp(m)-DS)/SPAN)*100;
+const fmtWin=(s,e)=> (!s&&!e)?'언제든' : (s&&!e)?s+'~' : (!s&&e)?'~'+e : s+'~'+e;
+
+const NAV = [
+  {s:'timetable', label:'잠정결론 맞추기', nav:false, ico:'M3 4.5h18v16H3zM3 9h18M8 3v3M16 3v3', key:'agree'},
+];
+// nav items rendered fixed; active depends on screen
+function renderNav(active){
+  const items = [
+    {key:'agree',     label:'잠정결론 맞추기', ico:'M3 4.5h18v16H3zM3 9h18M8 3v3M16 3v3'},
+    {key:'timetable', label:'시간표',          ico:'M12 4a8 8 0 100 16 8 8 0 000-16zM12 7.5V12l3 2'},
+    {key:'sessions',  label:'다가오는 세션',   ico:'M12 4a8 8 0 100 16 8 8 0 000-16zM8.5 12.5l2.5 2.5 4.5-5'},
+  ];
+  document.getElementById('nav').innerHTML = items.map(it=>`
+    <a class="${it.key===active?'on':''}">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${it.ico}"/></svg>
+      ${it.label}</a>`).join('');
+}
+
+function timetableHTML(){
+  const ticks = TICKS.map(h=>`<span class="tick" style="top:${pct(h*60)}%">${h}</span>`).join('');
+  const names = COMMITS.map(m=>`<div class="nm" style="${m.id===MYID?'color:var(--blue)':''}">${m.name}</div>`).join('');
+  const grid = TICKS.map(h=>`<div class="grid-h" style="top:${pct(h*60)}%"></div>`).join('');
+  const seps = COMMITS.slice(1).map((m,i)=>`<div class="sep" style="left:${(i+1)*100/N}%"></div>`).join('');
+  const ob_t = pct(toMin(SUGGEST.start,DS)), ob_b = pct(toMin(SUGGEST.end,DE));
+  const overlap = `<div class="overlap" style="top:${ob_t}%;height:${ob_b-ob_t}%"></div>`;
+  const bars = COMMITS.map((m,i)=>{
+    const t=pct(toMin(m.start,DS)), b=pct(toMin(m.end,DE));
+    if(b<=t) return '';
+    return `<div class="bar" style="left:${i*100/N}%;width:${100/N}%;top:${t}%;height:${b-t}%"><span style="background:${m.c}"></span></div>`;
+  }).join('');
+  const wins = COMMITS.map(m=>`<div class="w">${fmtWin(m.start,m.end)}</div>`).join('');
+  const topics = TOPICS.map(t=>`<div class="topic"><span class="who">${t.who}</span><span class="sep2">·</span><span>${t.text}</span></div>`).join('');
+
+  return `<section class="card">
+    <div class="card-head"><h2>6월 20일 시간표</h2><span class="meta">5명 참석</span></div>
+    <div class="tt">
+      <div class="axis"><div class="spacer"></div><div class="track">${ticks}</div></div>
+      <div class="cols">
+        <div class="names">${names}</div>
+        <div class="chart">${grid}${seps}${overlap}${bars}</div>
+        <div class="wins">${wins}</div>
+      </div>
+    </div>
+    <div class="suggest"><span class="dot"></span>다 같이 되는 시간 <b style="margin:0 4px">${SUGGEST.start}~${SUGGEST.end}</b> — 이때 어때요?</div>
+
+    <div class="sect">
+      <p class="lbl">내 가능 시간</p>
+      <label class="check"><input type="checkbox"> 시간무관 (아무 때나 OK)</label>
+      <div class="times">
+        <input type="time" value="19:00"><span class="til">~</span><input type="time" value="23:00">
+        <span style="font-size:13px;color:var(--muted)">끝 시간 비우면 "19:00~"</span>
+      </div>
+      <div class="btn-row"><button class="btn-blue">시간 수정</button><button class="btn-ghost">참석 취소</button></div>
+    </div>
+
+    <div class="sect">
+      <p class="lbl">발표자 / 주제 <span style="font-weight:400;color:var(--muted)">(선택)</span></p>
+      <div class="topics">${topics}</div>
+      <div class="topic-add"><input placeholder="뭐 발표할지 (선택)"><button class="btn-ghost">추가</button></div>
+    </div>
+  </section>`;
+}
+
+function sessionsHTML(){
+  const upcoming = [{d:'6월 20일 (토)'}];
+  const past = ['5월 30일 (토)','5월 16일 (금)'];
+  const up = upcoming.map(s=>`<li class="sess"><span class="ck">✓</span><span class="d">${s.d}</span></li>`).join('');
+  const pa = past.map(d=>`<div class="past-item">${d}</div>`).join('');
+  return `<div class="sessions-wrap">
+    <div class="card-head"><h2>다가오는 세션</h2></div>
+    <ul class="sess-list">${up}</ul>
+    <p class="past-head">지난 세션</p>
+    <div class="past-list">${pa}</div>
+  </div>`;
+}
+
+document.getElementById('screen-timetable').innerHTML = timetableHTML();
+document.getElementById('screen-sessions').innerHTML = sessionsHTML();
+renderNav('timetable');
+
+document.querySelectorAll('.toggle button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const s = btn.dataset.s;
+    document.querySelectorAll('.toggle button').forEach(b=>b.classList.toggle('on', b===btn));
+    document.querySelectorAll('.screen').forEach(p=>p.classList.toggle('show', p.classList.contains(s)));
+    renderNav(s);
+  });
+});
+</script>
+</body>
+</html>

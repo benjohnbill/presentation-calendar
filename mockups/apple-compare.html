@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>발표 캘린더 — Apple 적용 비교</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --member1:#f97316; --member2:#0ea5e9; --member3:#8b5cf6; --member4:#10b981; --member5:#f43f5e; }
+body { background:#e9e9ec; color:#1c1917; font-family: system-ui, sans-serif; }
+
+/* ---------- toggle bar ---------- */
+.toggle { position:sticky; top:0; z-index:50; display:flex; gap:8px; align-items:center;
+  padding:14px 20px; background:#1c1c1e; }
+.toggle b { color:#fff; font:600 14px Inter, system-ui; margin-right:8px; letter-spacing:-.01em; }
+.toggle button { font:500 13px Inter, system-ui; padding:8px 16px; border-radius:8px; border:0;
+  background:#3a3a3c; color:#d2d2d7; cursor:pointer; transition:transform .12s; }
+.toggle button.on { background:#fff; color:#1c1c1e; }
+.toggle button:active { transform:scale(.96); }
+.toggle .cap { color:#86868b; font:400 12px Inter; margin-left:auto; }
+
+.stage { display:flex; justify-content:flex-start; padding:28px; }
+.panel { display:none; width:1080px; }
+.panel.show { display:block; }
+
+/* ============ shared structure ============ */
+.app { display:flex; min-height:680px; border-radius:18px; overflow:hidden; }
+.side { width:228px; shrink:0; display:flex; flex-direction:column; padding:20px 14px; }
+.brand { padding:6px 10px 22px; }
+.brand h1 { font-size:18px; font-weight:700; letter-spacing:-.02em; }
+.brand p { font-size:12px; margin-top:3px; }
+.nav { display:flex; flex-direction:column; gap:4px; }
+.nav a { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:11px;
+  font-size:14px; font-weight:500; text-decoration:none; cursor:pointer; transition:transform .12s; }
+.nav a:active { transform:scale(.97); }
+.nav .ico { width:18px; height:18px; display:inline-block; }
+.me { margin-top:auto; }
+.me button { width:100%; display:flex; align-items:center; justify-content:center; gap:6px;
+  border-radius:999px; padding:9px 12px; font-size:13px; font-weight:500; cursor:pointer; }
+
+.main { flex:1; padding:26px 30px; display:flex; flex-direction:column; }
+.cal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.cal-head h2 { font-weight:600; }
+.arrow { width:36px; height:36px; border-radius:999px; border:0; background:transparent;
+  font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform .12s; }
+.arrow:active { transform:scale(.92); }
+.dow { display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:8px; }
+.dow span { text-align:center; font-size:11px; font-weight:500; padding-bottom:4px; }
+.grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; flex:1; }
+
+.cell { min-height:84px; border-radius:8px; padding:6px; display:flex; flex-direction:column;
+  cursor:pointer; transition:transform .12s; position:relative; }
+.cell:active { transform:scale(.98); }
+.cell.blank { background:transparent !important; border:0 !important; cursor:default; }
+.cell-top { display:flex; align-items:center; justify-content:between; margin-bottom:3px; height:18px; }
+.daynum { font-size:12px; font-weight:600; line-height:1; }
+.dot-today { width:20px; height:20px; border-radius:999px; display:flex; align-items:center; justify-content:center; }
+.cell .daynum.dot-today { color:#fff; }
+.badge { margin-left:auto; font-size:10px; display:flex; align-items:center; }
+.bands { display:flex; flex-direction:column; gap:2px; flex:1; }
+.band { display:flex; align-items:center; gap:3px; border-radius:3px; padding:0 4px; color:#fff;
+  font-size:10px; font-weight:500; line-height:15px; overflow:hidden; white-space:nowrap; }
+.band .ck { font-size:8px; }
+.ovf { font-size:10px; font-weight:500; padding:0 4px; }
+.tt { margin-top:3px; border:0; color:#fff; font-size:10px; font-weight:700; padding:3px 0;
+  display:block; width:100%; white-space:nowrap; text-align:center; cursor:pointer; transition:transform .12s; }
+.tt:active { transform:scale(.95); }
+
+.confirm { margin-top:14px; display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:12px 14px; }
+.confirm p { font-size:14px; }
+.confirm .grp { display:flex; gap:8px; }
+.confirm button { font-size:14px; font-weight:600; cursor:pointer; transition:transform .12s; }
+.confirm button:active { transform:scale(.96); }
+
+/* weekend colors (shared, toned per variant) */
+.sun { color:#f87171; }
+.sat { color:#60a5fa; }
+
+/* =================================================================
+   V1 — 현재 (orange / Geist / warm off-white / mixed radii / shadows)
+   ================================================================= */
+.v1 .app { background:#fafaf8; font-family:'Geist', system-ui; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.v1 .side { background:rgba(255,255,255,.7); border-right:1px solid #e7e5e4; }
+.v1 .brand h1 { color:#1c1917; }
+.v1 .brand p { color:#a8a29e; }
+.v1 .nav a { color:#57534e; }
+.v1 .nav a.on { background:#fff7ed; color:#c2410c; }
+.v1 .me button { border:1px solid #e7e5e4; background:#fff; color:#44403c; }
+.v1 .cal-head h2 { color:#1c1917; font-size:20px; letter-spacing:-.01em; }
+.v1 .arrow { color:#78716c; }
+.v1 .dow span { color:#a8a29e; }
+.v1 .cell { background:#fff; border:1px solid #e7e5e4; }
+.v1 .cell.past { background:rgba(245,245,244,.4); border-color:#f5f5f4; }
+.v1 .cell.past .daynum { color:#d6d3d1; }
+.v1 .cell.hot { box-shadow:0 0 0 1px #fdba74; }
+.v1 .cell.session { box-shadow:0 0 0 2px #10b981; }
+.v1 .cell.pending { background:#fff7ed; border-color:#fb923c; box-shadow:0 0 0 1px #fdba74; }
+.v1 .daynum { color:#57534e; }
+.v1 .dot-today { background:#1c1917; }
+.v1 .tt { background:#f97316; border-radius:5px; }
+.v1 .badge.add { color:#f97316; font-weight:700; }
+.v1 .badge.ses { color:#10b981; }
+.v1 .ovf { color:#a8a29e; }
+.v1 .confirm { background:rgba(255,255,255,.95); border:1px solid #e7e5e4; border-radius:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.1); backdrop-filter:blur(6px); }
+.v1 .confirm p { color:#44403c; }
+.v1 .confirm .cancel { border:1px solid #d6d3d1; background:#fff; color:#57534e; border-radius:8px; padding:6px 14px; }
+.v1 .confirm .ok { border:0; background:#f97316; color:#fff; border-radius:8px; padding:6px 18px; box-shadow:0 1px 2px rgba(0,0,0,.1); }
+
+/* =================================================================
+   V2 — 결 다듬기 (orange 유지 + Apple craft: Inter, 17px, pill 통일,
+        그림자 제거, hairline, 음수 트래킹, frosted confirm)
+   ================================================================= */
+.v2 .app { background:#f5f5f7; font-family:'Inter', system-ui; }
+.v2 .side { background:#fff; border-right:1px solid #e2e2e6; }
+.v2 .brand h1 { color:#1d1d1f; letter-spacing:-.022em; }
+.v2 .brand p { color:#86868b; }
+.v2 .nav a { color:#424245; border-radius:999px; }
+.v2 .nav a.on { background:#fff2e8; color:#c1551a; }
+.v2 .me button { border:1px solid #e2e2e6; background:#fafafc; color:#1d1d1f; }
+.v2 .cal-head h2 { color:#1d1d1f; font-size:24px; letter-spacing:-.022em; }
+.v2 .arrow { color:#86868b; }
+.v2 .dow span { color:#86868b; }
+.v2 .cell { background:#fff; border:1px solid #e8e8ec; border-radius:12px; }
+.v2 .cell.past { background:#fafafc; border-color:#f0f0f2; }
+.v2 .cell.past .daynum { color:#c7c7cc; }
+.v2 .cell.hot { border-color:#f7b27a; box-shadow:0 0 0 1px #f7b27a; }
+.v2 .cell.session { border-color:#34c759; box-shadow:0 0 0 1.5px #34c759; }
+.v2 .cell.pending { background:#fff7f0; border-color:#f4711e; box-shadow:0 0 0 1px #f4711e; }
+.v2 .daynum { color:#1d1d1f; }
+.v2 .dot-today { background:#1d1d1f; }
+.v2 .band { border-radius:5px; }
+.v2 .tt { background:#f4711e; border-radius:999px; padding:3px 0; }
+.v2 .badge.add { color:#f4711e; font-weight:700; }
+.v2 .badge.ses { color:#34c759; }
+.v2 .ovf { color:#86868b; }
+.v2 .confirm { background:rgba(245,245,247,.8); border:1px solid #e2e2e6; border-radius:14px;
+  backdrop-filter:saturate(180%) blur(20px); }
+.v2 .confirm p { color:#1d1d1f; }
+.v2 .confirm .cancel { border:1px solid #d2d2d7; background:#fff; color:#424245; border-radius:999px; padding:8px 18px; }
+.v2 .confirm .ok { border:0; background:#f4711e; color:#fff; border-radius:999px; padding:8px 22px; }
+
+/* =================================================================
+   V3 — 적극 / Apple-faithful (Action Blue 단일 액센트, near-black chrome,
+        핫한 날 = dark tile 반전, 풀 타이포 위계, 그림자 0)
+   ================================================================= */
+.v3 .app { background:#f5f5f7; font-family:'Inter', system-ui; }
+.v3 .side { background:#1d1d1f; }
+.v3 .brand h1 { color:#f5f5f7; letter-spacing:-.022em; }
+.v3 .brand p { color:#86868b; }
+.v3 .nav a { color:#d2d2d7; }
+.v3 .nav a.on { background:rgba(0,102,204,.18); color:#2997ff; }
+.v3 .nav .ico { opacity:.85; }
+.v3 .me button { border:1px solid #3a3a3c; background:#2a2a2c; color:#f5f5f7; }
+.v3 .cal-head h2 { color:#1d1d1f; font-size:34px; font-weight:600; letter-spacing:-.03em; }
+.v3 .arrow { color:#86868b; }
+.v3 .dow span { color:#86868b; }
+.v3 .cell { background:#fff; border:1px solid #e8e8ec; border-radius:8px; }
+.v3 .cell.past { background:#f0f0f2; border-color:#ececef; }
+.v3 .cell.past .daynum { color:#c7c7cc; }
+.v3 .daynum { color:#1d1d1f; }
+.v3 .dot-today { background:#0066cc; }
+.v3 .band { border-radius:4px; }
+.v3 .ovf { color:#86868b; }
+/* the signature: hot/session days invert to a near-black gallery tile */
+.v3 .cell.dark { background:#272729; border-color:#272729; }
+.v3 .cell.dark .daynum { color:#f5f5f7; }
+.v3 .cell.dark .sun, .v3 .cell.dark .sat { color:#d2d2d7; }
+.v3 .cell.dark .ovf { color:#86868b; }
+.v3 .cell.dark.session { box-shadow:inset 3px 0 0 #2997ff; }
+.v3 .tt { background:#0066cc; border-radius:999px; padding:3px 0; }
+.v3 .confirmed { margin-top:3px; text-align:center; font-size:10px; font-weight:600; white-space:nowrap; color:#2997ff; }
+.v3 .badge.add { color:#0066cc; font-weight:700; }
+.v3 .badge.ses { color:#2997ff; }
+.v3 .cell.pending { background:#eef5fc; border-color:#0066cc; box-shadow:0 0 0 1px #0066cc; }
+.v3 .cell.pending .daynum { color:#0066cc; }
+.v3 .confirm { background:rgba(245,245,247,.8); border:1px solid #e2e2e6; border-radius:12px;
+  backdrop-filter:saturate(180%) blur(20px); }
+.v3 .confirm p { color:#1d1d1f; }
+.v3 .confirm .cancel { border:1px solid #d2d2d7; background:#fff; color:#424245; border-radius:999px; padding:8px 18px; }
+.v3 .confirm .ok { border:0; background:#0066cc; color:#fff; border-radius:999px; padding:8px 22px; }
+
+/* =================================================================
+   V4 — 추천 / V3에서 dark 타일 반전만 제거 (Apple-faithful, light)
+        핫한 날 = blue ring, 세션 확정 = 좌측 blue 바. 나머지는 V3 그대로.
+   ================================================================= */
+.v4 .app { background:#f5f5f7; font-family:'Inter', system-ui; }
+.v4 .side { background:#1d1d1f; }
+.v4 .brand h1 { color:#f5f5f7; letter-spacing:-.022em; }
+.v4 .brand p { color:#86868b; }
+.v4 .nav a { color:#d2d2d7; }
+.v4 .nav a.on { background:rgba(0,102,204,.18); color:#2997ff; }
+.v4 .nav .ico { opacity:.85; }
+.v4 .me button { border:1px solid #3a3a3c; background:#2a2a2c; color:#f5f5f7; }
+.v4 .cal-head h2 { color:#1d1d1f; font-size:34px; font-weight:600; letter-spacing:-.03em; }
+.v4 .arrow { color:#86868b; }
+.v4 .dow span { color:#86868b; }
+.v4 .cell { background:#fff; border:1px solid #e8e8ec; border-radius:8px; }
+.v4 .cell.past { background:#f0f0f2; border-color:#ececef; }
+.v4 .cell.past .daynum { color:#c7c7cc; }
+.v4 .daynum { color:#1d1d1f; }
+.v4 .dot-today { background:#0066cc; }
+.v4 .band { border-radius:4px; }
+.v4 .ovf { color:#86868b; }
+/* hot day: quiet blue ring instead of the dark gallery tile */
+.v4 .cell.hot { border-color:#0066cc; box-shadow:0 0 0 1px #0066cc; }
+/* confirmed session: filled-left blue indicator + ring */
+.v4 .cell.session { border-color:#0066cc; box-shadow:inset 3px 0 0 #0066cc, 0 0 0 1px #0066cc; }
+.v4 .tt { background:#0066cc; border-radius:999px; padding:3px 0; }
+.v4 .confirmed { margin-top:3px; text-align:center; font-size:10px; font-weight:600; white-space:nowrap; color:#0066cc; }
+.v4 .badge.add { color:#0066cc; font-weight:700; }
+.v4 .badge.ses { color:#0066cc; }
+.v4 .cell.pending { background:#eef5fc; border-color:#0066cc; box-shadow:0 0 0 1px #0066cc; }
+.v4 .cell.pending .daynum { color:#0066cc; }
+.v4 .confirm { background:rgba(245,245,247,.8); border:1px solid #e2e2e6; border-radius:12px;
+  backdrop-filter:saturate(180%) blur(20px); }
+.v4 .confirm p { color:#1d1d1f; }
+.v4 .confirm .cancel { border:1px solid #d2d2d7; background:#fff; color:#424245; border-radius:999px; padding:8px 18px; }
+.v4 .confirm .ok { border:0; background:#0066cc; color:#fff; border-radius:999px; padding:8px 22px; }
+</style>
+</head>
+<body>
+  <div class="toggle">
+    <b>발표 캘린더 · Apple design 적용 비교</b>
+    <button data-v="v1" class="on">V1 · 현재</button>
+    <button data-v="v2">V2 · 결 다듬기 (소극)</button>
+    <button data-v="v3">V3 · Apple 충실 (적극)</button>
+    <button data-v="v4">V4 · 다크 제거 (추천)</button>
+    <span class="cap">2026년 6월 · 오늘 15일 · 같은 데이터</span>
+  </div>
+
+  <div class="stage">
+    <div class="panel v1 show"></div>
+    <div class="panel v2"></div>
+    <div class="panel v3"></div>
+    <div class="panel v4"></div>
+  </div>
+
+<script>
+const MEMBERS = [
+  {id:1,name:'진근',c:'var(--member1)'},
+  {id:2,name:'혁호',c:'var(--member2)'},
+  {id:3,name:'경한',c:'var(--member3)'},
+  {id:4,name:'준형',c:'var(--member4)'},
+  {id:5,name:'유빈',c:'var(--member5)'},
+];
+const NAME = Object.fromEntries(MEMBERS.map(m=>[m.id,m.name]));
+const COLOR = Object.fromEntries(MEMBERS.map(m=>[m.id,m.c]));
+const MYID = 1;
+const TODAY = '2026-06-15';
+const AVAIL = {
+  '2026-06-08':[1,2], '2026-06-11':[1,2,3,4], '2026-06-13':[2,3],          // past (dimmed)
+  '2026-06-15':[3,4],
+  '2026-06-16':[2,3], '2026-06-17':[3], '2026-06-18':[1,2,3,4],
+  '2026-06-19':[2,5], '2026-06-20':[1,2,3,4,5], '2026-06-21':[1,5],
+  '2026-06-22':[3], '2026-06-23':[2,3,4], '2026-06-24':[1],
+  '2026-06-25':[2,3,4,5], '2026-06-26':[1,2], '2026-06-27':[1,3,5],
+  '2026-06-28':[4,5], '2026-06-30':[2],
+};
+const SESSIONS = new Set(['2026-06-20']);
+const PENDING  = new Set(['2026-06-16','2026-06-17']); // 내가 드래그로 추가 중
+const MAX_BANDS = 3;
+const DOWK = ['일','월','화','수','목','금','토'];
+
+function juneCells() {
+  const first = new Date(Date.UTC(2026,5,1)).getUTCDay(); // 0=Sun
+  const cells = [];
+  for (let i=0;i<first;i++) cells.push(null);
+  for (let d=1;d<=30;d++) cells.push('2026-06-'+String(d).padStart(2,'0'));
+  while (cells.length % 7) cells.push(null);
+  return cells;
+}
+
+function cellHTML(date, variant) {
+  if (!date) return '<div class="cell blank"></div>';
+  const dnum = Number(date.slice(8,10));
+  const dow = new Date(date+'T00:00:00Z').getUTCDay();
+  const past = date < TODAY;
+  const today = date === TODAY;
+  const ids = AVAIL[date] || [];
+  const count = ids.length;
+  const hot = count >= 4 && !past;
+  const session = SESSIONS.has(date);
+  const pending = PENDING.has(date);
+  // my band first
+  const mineNow = ids.includes(MYID) || pending;
+  const others = ids.filter(i=>i!==MYID);
+  const ordered = mineNow ? [MYID, ...others] : others;
+  const shown = ordered.slice(0, MAX_BANDS);
+  const overflow = ordered.length - shown.length;
+
+  const cls = ['cell'];
+  if (past) cls.push('past');
+  if (hot) cls.push('hot');
+  if (session) cls.push('session');
+  if (pending) cls.push('pending');
+  if (variant === 'v3' && (hot || session)) cls.push('dark');
+
+  const dowCls = dow===0?'sun':dow===6?'sat':'';
+  const daynum = today
+    ? `<span class="daynum dot-today">${dnum}</span>`
+    : `<span class="daynum ${past?'':dowCls}">${dnum}</span>`;
+
+  let badge = '';
+  if (pending) badge = '<span class="badge add">＋</span>';
+  else if (session) badge = '<span class="badge ses">✓</span>';
+
+  const bands = shown.map(id=>{
+    const me = id===MYID;
+    return `<span class="band" style="background:${COLOR[id]}">`+
+           (me?'<span class="ck">✓</span>':'')+
+           `<span>${NAME[id]}</span></span>`;
+  }).join('') + (overflow>0?`<span class="ovf">+${overflow}</span>`:'');
+
+  let foot = '';
+  if (session && (variant === 'v3' || variant === 'v4')) foot = '<div class="confirmed">세션 확정</div>';
+  else if (hot) foot = '<div><button class="tt">시간표 →</button></div>';
+
+  return `<div class="${cls.join(' ')}">
+    <div class="cell-top">${daynum}${badge}</div>
+    <div class="bands">${bands}</div>
+    ${foot}
+  </div>`;
+}
+
+const NAV = [
+  {label:'잠정결론 맞추기', on:true,  ico:'M3 4.5h18v16H3zM3 9h18M8 3v3M16 3v3'},
+  {label:'시간표',          on:false, ico:'M12 4a8 8 0 100 16 8 8 0 000-16zM12 7.5V12l3 2'},
+  {label:'다가오는 세션',   on:false, ico:'M12 4a8 8 0 100 16 8 8 0 000-16zM8.5 12.5l2.5 2.5 4.5-5'},
+];
+
+function panelHTML(variant) {
+  const cells = juneCells().map(d=>cellHTML(d, variant)).join('');
+  const nav = NAV.map(n=>`<a class="${n.on?'on':''}">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${n.ico}"/></svg>
+      ${n.label}</a>`).join('');
+  const dows = DOWK.map((w,i)=>`<span class="${i===0?'sun':i===6?'sat':''}">${w}</span>`).join('');
+  return `<div class="app">
+    <aside class="side">
+      <div class="brand"><h1>발표 캘린더</h1><p>4명이면 세션이 떠요</p></div>
+      <nav class="nav">${nav}</nav>
+      <div class="me"><button><span style="opacity:.5">나:</span> 진근 ▾</button></div>
+    </aside>
+    <main class="main">
+      <div class="cal-head">
+        <button class="arrow">‹</button>
+        <h2>2026년 6월</h2>
+        <button class="arrow">›</button>
+      </div>
+      <div class="dow">${dows}</div>
+      <div class="grid">${cells}</div>
+      <div class="confirm">
+        <p><b style="font-weight:600">2일 추가</b> <span style="opacity:.55">— 맞으면 확인</span></p>
+        <div class="grp">
+          <button class="cancel">취소</button>
+          <button class="ok">확인</button>
+        </div>
+      </div>
+    </main>
+  </div>`;
+}
+
+['v1','v2','v3','v4'].forEach(v=>{
+  document.querySelector('.panel.'+v).innerHTML = panelHTML(v);
+});
+
+document.querySelectorAll('.toggle button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const v = btn.dataset.v;
+    document.querySelectorAll('.toggle button').forEach(b=>b.classList.toggle('on', b===btn));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('show', p.classList.contains(v)));
+  });
+});
+</script>
+</body>
+</html>

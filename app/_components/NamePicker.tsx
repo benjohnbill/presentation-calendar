@@ -31,7 +31,7 @@ export function NamePicker({ members, value, onPick }: { members: Member[]; valu
         <button
           key={m.id}
           onClick={() => onPick(m.id)}
-          className={`rounded-full px-4 py-1.5 text-sm transition ${value === m.id ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          className={`rounded-full px-4 py-1.5 text-sm transition active:scale-[0.97] ${value === m.id ? 'bg-accent text-white' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'}`}
         >
           {m.name}
         </button>

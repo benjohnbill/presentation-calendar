@@ -9,7 +9,7 @@ import { SessionsView } from './SessionsView'
 import { CalendarIcon, ClockIcon, CheckCircleIcon } from './icons'
 import { applyAvailability, commit, uncommit, addTopic } from '../actions'
 import type { MonthAnchor } from '@/lib/calendar'
-import { buildColorMap } from '@/lib/calendar'
+import { buildColorMap, buildInkMap } from '@/lib/calendar'
 
 type Member = { id: number; name: string }
 type View = 'agree' | 'timetable' | 'sessions'
@@ -42,6 +42,7 @@ export function AppShell(props: {
   const [pickerOpen, setPickerOpen] = useState(false)
 
   const colorMap = buildColorMap(props.members.map((m) => m.id))
+  const inkMap = buildInkMap(props.members.map((m) => m.id))
   const sessionSet = new Set(props.sessionDates)
   const myName = props.members.find((m) => m.id === myId)?.name
 
@@ -80,6 +81,7 @@ export function AppShell(props: {
           availByDate={props.availByDate}
           members={props.members}
           colorMap={colorMap}
+          inkMap={inkMap}
           sessionDates={sessionSet}
           myId={myId}
           onApply={async (adds, removes) => {
@@ -95,6 +97,8 @@ export function AppShell(props: {
           key={props.openDate ?? 'first'}
           days={props.timetableDays}
           members={props.members}
+          colorMap={colorMap}
+          inkMap={inkMap}
           myId={myId}
           initialDate={props.openDate}
           onCommit={async (date, w) => {
@@ -117,10 +121,10 @@ export function AppShell(props: {
   return (
     <div className="flex h-[100dvh] flex-col bg-[var(--background)] lg:flex-row">
       {/* PC sidebar */}
-      <nav className="hidden shrink-0 flex-col border-r border-stone-200 bg-white/70 px-3 py-5 lg:flex lg:w-60">
+      <nav className="hidden shrink-0 flex-col bg-sidebar px-3 py-5 lg:flex lg:w-60">
         <div className="px-2 pb-6">
-          <h1 className="text-lg font-bold tracking-tight">발표 캘린더</h1>
-          <p className="mt-0.5 text-xs text-stone-400">4명이면 세션이 떠요</p>
+          <h1 className="text-lg font-bold tracking-tight text-[#f5f5f7]">발표 캘린더</h1>
+          <p className="mt-0.5 text-xs text-muted">4명이면 세션이 떠요</p>
         </div>
         <div className="flex flex-col gap-1">
           {NAV.map((item) => (
@@ -128,7 +132,7 @@ export function AppShell(props: {
               key={item.key}
               onClick={() => setView(item.key)}
               className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition ${
-                view === item.key ? 'bg-orange-50 text-orange-700' : 'text-stone-600 hover:bg-stone-100'
+                view === item.key ? 'bg-accent/15 text-[#2997ff]' : 'text-[#d2d2d7] hover:bg-white/5'
               }`}
             >
               <item.Icon className="h-5 w-5 shrink-0" />
@@ -149,8 +153,8 @@ export function AppShell(props: {
       </nav>
 
       {/* mobile top bar */}
-      <header className="flex items-center justify-between border-b border-stone-200 bg-white/80 px-4 py-3 backdrop-blur lg:hidden">
-        <h1 className="text-base font-bold tracking-tight">발표 캘린더</h1>
+      <header className="flex items-center justify-between bg-sidebar px-4 py-3 lg:hidden">
+        <h1 className="text-base font-bold tracking-tight text-[#f5f5f7]">발표 캘린더</h1>
         <IdentityControl
           myName={myName}
           members={props.members}
@@ -166,13 +170,13 @@ export function AppShell(props: {
       <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">{content}</main>
 
       {/* mobile bottom tab bar */}
-      <nav className="grid grid-cols-3 border-t border-stone-200 bg-white/90 backdrop-blur lg:hidden">
+      <nav className="grid grid-cols-3 bg-sidebar lg:hidden">
         {NAV.map((item) => (
           <button
             key={item.key}
             onClick={() => setView(item.key)}
             className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
-              view === item.key ? 'text-orange-600' : 'text-stone-400'
+              view === item.key ? 'text-[#2997ff]' : 'text-[#86868b]'
             }`}
           >
             <item.Icon className="h-5 w-5" />
@@ -199,11 +203,11 @@ function IdentityControl({
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className={`flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50 ${
+        className={`flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-[#f5f5f7] transition hover:bg-white/10 ${
           compact ? '' : 'w-full justify-center'
         }`}
       >
-        <span className="text-stone-400">나:</span> {myName ?? '?'} <span className="text-xs text-stone-400">▾</span>
+        <span className="text-muted">나:</span> {myName ?? '?'} <span className="text-xs text-muted">▾</span>
       </button>
       {open && (
         <div

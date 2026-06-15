@@ -1,7 +1,7 @@
 'use client'
 import { useMemo, useRef, useState, useTransition } from 'react'
 import type { MonthAnchor } from '@/lib/calendar'
-import { monthGrid } from '@/lib/calendar'
+import { monthGrid, tintOf } from '@/lib/calendar'
 import { SNAP_MS, SNAP_EASE, settleIndex } from '@/lib/swipe'
 
 type Member = { id: number; name: string }
@@ -12,6 +12,7 @@ type Props = {
   availByDate: Record<string, number[]> // date -> available memberIds
   members: Member[]
   colorMap: Record<number, string>
+  inkMap: Record<number, string>
   sessionDates: Set<string>
   myId: number
   // Apply a batch of pending changes (one round-trip). adds/removes are date strings.
@@ -43,7 +44,7 @@ type Gesture = {
 }
 
 export function MonthCalendar({
-  anchors, today, availByDate, members, colorMap, sessionDates, myId, onApply, onOpenTimetable,
+  anchors, today, availByDate, members, colorMap, inkMap, sessionDates, myId, onApply, onOpenTimetable,
 }: Props) {
   const [monthIdx, setMonthIdx] = useState(0)
   const [pending, setPending] = useState<Map<string, Diff>>(new Map())
@@ -212,12 +213,12 @@ export function MonthCalendar({
     const overflow = ordered.length - shown.length
 
     const stateRing = pState === 'add'
-      ? 'border-orange-400 bg-orange-50 ring-1 ring-orange-300'
+      ? 'border-accent bg-accent-soft ring-1 ring-accent'
       : pState === 'remove'
-        ? 'border-rose-300 bg-rose-50 ring-1 ring-rose-200'
+        ? 'border-stone-300 bg-stone-100/70 ring-1 ring-stone-200'
         : isPast
-          ? 'border-stone-100 bg-stone-50/40'
-          : 'border-stone-200 bg-white'
+          ? 'border-[#ececef] bg-[#f0f0f2]'
+          : 'border-hairline bg-white'
 
     return (
       <div
@@ -234,26 +235,26 @@ export function MonthCalendar({
           }
         }}
         className={`group relative flex min-h-[58px] flex-col rounded-lg border p-1 transition sm:min-h-[88px] ${stateRing} ${
-          hot && !isPast && !pState ? 'ring-1 ring-orange-300' : ''
-        } ${isSession && !pState ? 'ring-2 ring-emerald-500' : ''} ${isPast ? 'cursor-default' : 'cursor-pointer'}`}
+          hot && !isPast && !pState ? 'ring-1 ring-accent' : ''
+        } ${isSession && !pState ? 'ring-2 ring-accent' : ''} ${isPast ? 'cursor-default' : 'cursor-pointer'}`}
       >
         <div className="mb-0.5 flex items-center justify-between">
           <span
             className={`text-[11px] font-semibold leading-none sm:text-xs ${
               isPast ? 'text-stone-300'
-                : dow === 0 ? 'text-red-400'
-                : dow === 6 ? 'text-blue-400'
-                : 'text-stone-600'
-            } ${isToday ? 'flex h-5 w-5 items-center justify-center rounded-full bg-stone-900 text-white' : ''}`}
+                : dow === 0 ? 'text-[#e0697b]'
+                : dow === 6 ? 'text-[#5b8fd6]'
+                : 'text-ink'
+            } ${isToday ? 'flex h-5 w-5 items-center justify-center rounded-full bg-accent text-white' : ''}`}
           >
             {dayNum}
           </span>
           {pState === 'add' ? (
-            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold leading-none text-white">+</span>
+            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-accent text-[9px] font-bold leading-none text-white">+</span>
           ) : pState === 'remove' ? (
-            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold leading-none text-white">−</span>
+            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-stone-400 text-[9px] font-bold leading-none text-white">−</span>
           ) : isSession ? (
-            <span className="text-[10px] text-emerald-500">✓</span>
+            <span className="text-[10px] text-accent">✓</span>
           ) : null}
         </div>
 
@@ -266,10 +267,10 @@ export function MonthCalendar({
             return (
               <span
                 key={id}
-                className={`flex items-center gap-0.5 truncate rounded-[3px] px-1 text-[9px] font-medium leading-[14px] text-white sm:text-[10px] sm:leading-4 ${
-                  meAdding ? 'opacity-80 ring-1 ring-white/70' : ''
+                className={`flex items-center gap-0.5 truncate rounded-[3px] pr-1 text-[9px] font-semibold leading-[14px] sm:text-[10px] sm:leading-4 ${
+                  meAdding ? 'ring-1 ring-accent/40' : ''
                 } ${meRemoving ? 'opacity-50 line-through' : ''}`}
-                style={{ backgroundColor: colorMap[id] }}
+                style={{ backgroundColor: tintOf(colorMap[id], 0.16), color: inkMap[id], borderLeft: `3px solid ${colorMap[id]}`, paddingLeft: 4 }}
               >
                 {isMe && <span className="text-[8px]">✓</span>}
                 <span className="truncate">{nameById.get(id) ?? '?'}</span>
@@ -277,7 +278,7 @@ export function MonthCalendar({
             )
           })}
           {overflow > 0 && (
-            <span className="px-1 text-[9px] font-medium text-stone-400 sm:text-[10px]">+{overflow}</span>
+            <span className="px-1 text-[9px] font-medium text-muted sm:text-[10px]">+{overflow}</span>
           )}
         </div>
 
@@ -285,7 +286,7 @@ export function MonthCalendar({
           <button
             type="button"
             onClick={() => onOpenTimetable(d)}
-            className="mt-0.5 rounded bg-orange-500 py-0.5 text-center text-[9px] font-bold text-white transition hover:bg-orange-600 sm:text-[10px]"
+            className="mt-0.5 rounded-full bg-accent py-0.5 text-center text-[9px] font-bold text-white transition hover:bg-accent-strong active:scale-[0.97] sm:text-[10px]"
           >
             시간표 →
           </button>
@@ -368,21 +369,21 @@ export function MonthCalendar({
 
       {/* confirm bar — appears only when there is a pending selection */}
       {pending.size > 0 && (
-        <div className="sticky bottom-0 z-10 mt-2 flex items-center justify-between gap-2 rounded-xl border border-stone-200 bg-white/95 p-2.5 shadow-lg backdrop-blur">
-          <p className="min-w-0 truncate text-sm text-stone-700">
-            <span className="font-semibold text-stone-900">
+        <div className="sticky bottom-0 z-10 mt-2 flex items-center justify-between gap-2 rounded-xl border border-hairline bg-[rgba(245,245,247,0.8)] p-2.5 backdrop-blur-xl backdrop-saturate-150">
+          <p className="min-w-0 truncate text-sm text-stone-600">
+            <span className="font-semibold text-ink">
               {adds.length > 0 && `${adds.length}일 추가`}
               {adds.length > 0 && removes.length > 0 && ' · '}
               {removes.length > 0 && `${removes.length}일 해제`}
             </span>{' '}
-            <span className="text-stone-400">— 맞으면 확인</span>
+            <span className="text-muted">— 맞으면 확인</span>
           </p>
           <div className="flex shrink-0 gap-2">
             <button
               type="button"
               onClick={cancel}
               disabled={isSaving}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-600 transition hover:bg-stone-50 disabled:opacity-50"
+              className="rounded-full border border-stone-300 bg-white px-4 py-1.5 text-sm font-medium text-stone-600 transition hover:bg-stone-50 active:scale-[0.97] disabled:opacity-50"
             >
               취소
             </button>
@@ -390,7 +391,7 @@ export function MonthCalendar({
               type="button"
               onClick={confirm}
               disabled={isSaving}
-              className="rounded-lg bg-orange-500 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 active:scale-[0.98] disabled:opacity-60"
+              className="rounded-full bg-accent px-5 py-1.5 text-sm font-semibold text-white transition hover:bg-accent-strong active:scale-[0.97] disabled:opacity-60"
             >
               {isSaving ? '저장 중…' : '확인'}
             </button>

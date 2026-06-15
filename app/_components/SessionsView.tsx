@@ -19,10 +19,10 @@ export function SessionsView({ upcoming, past }: { upcoming: SessionRow[]; past:
           {upcoming.map((s) => (
             <li
               key={s.date}
-              className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3"
+              className="flex items-center gap-3 rounded-2xl border border-[#cfe0f5] bg-accent-soft px-4 py-3"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-sm text-white">✓</span>
-              <span className="font-semibold text-emerald-900">{fmt(s.date)}</span>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-sm text-white">✓</span>
+              <span className="font-semibold text-[#0a3f7e]">{fmt(s.date)}</span>
             </li>
           ))}
         </ul>

@@ -20,11 +20,13 @@ const mmdd = (d: string) => `${Number(d.slice(5, 7))}월 ${Number(d.slice(8, 10)
 // available). Opens on the nearest day; the track follows the finger so the
 // adjacent day peeks in, then settles with an ease-out snap.
 export function TimetableCarousel({
-  days, members, myId, initialDate, onCommit, onUncommit, onAddTopic, onGoCalendar,
+  days, members, myId, colorMap, inkMap, initialDate, onCommit, onUncommit, onAddTopic, onGoCalendar,
 }: {
   days: Day[]
   members: Member[]
   myId: number
+  colorMap: Record<number, string>
+  inkMap: Record<number, string>
   initialDate: string | null
   onCommit: (date: string, window: { start: string | null; end: string | null }) => Promise<void>
   onUncommit: (date: string) => Promise<void>
@@ -44,7 +46,7 @@ export function TimetableCarousel({
         <ClockIcon className="mb-2 h-8 w-8 text-stone-300" />
         <p>아직 4명 이상 모인 날이 없어요.</p>
         <p className="mt-1">
-          <button onClick={onGoCalendar} className="font-medium text-orange-600 underline">잠정결론 맞추기</button>
+          <button onClick={onGoCalendar} className="font-medium text-accent underline">잠정결론 맞추기</button>
           에서 가능한 날을 모아보세요.
         </p>
       </div>
@@ -151,6 +153,8 @@ export function TimetableCarousel({
                 topics={day.tops}
                 suggested={day.suggested}
                 myId={myId}
+                colorMap={colorMap}
+                inkMap={inkMap}
                 onCommit={(w) => onCommit(day.date, w)}
                 onUncommit={() => onUncommit(day.date)}
                 onAddTopic={(t) => onAddTopic(day.date, t)}
@@ -170,7 +174,7 @@ export function TimetableCarousel({
                 type="button"
                 onClick={() => go(i)}
                 aria-label={`${mmdd(day.date)}로 이동`}
-                className={`h-1.5 rounded-full transition-all ${i === cur ? 'w-4 bg-orange-500' : 'w-1.5 bg-stone-300'}`}
+                className={`h-1.5 rounded-full transition-all ${i === cur ? 'w-4 bg-accent' : 'w-1.5 bg-stone-300'}`}
               />
             ))}
           </div>
