@@ -24,7 +24,7 @@ const MAX_BANDS = 3
 type Diff = 'add' | 'remove'
 
 // Gesture tuning
-const LONG_MS = 400 // hold this long on a date to enter range-select mode
+const LONG_MS = 300 // hold this long on a date to enter range-select mode
 const MOVE_CANCEL = 12 // px of movement that turns a press into a month swipe
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
