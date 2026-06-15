@@ -33,7 +33,7 @@ export function AppShell(props: {
   past: { date: string }[]
 }) {
   const router = useRouter()
-  const { id: myId, pick } = useIdentity()
+  const { id: myId, ready, pick } = useIdentity()
   const [view, setView] = useState<View>('agree')
   const [monthIdx, setMonthIdx] = useState(0)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -41,6 +41,12 @@ export function AppShell(props: {
   const colorMap = buildColorMap(props.members.map((m) => m.id))
   const sessionSet = new Set(props.sessionDates)
   const myName = props.members.find((m) => m.id === myId)?.name
+
+  // Until localStorage is read, render a neutral splash so returning users
+  // don't see the identity gate flash before their saved name loads.
+  if (!ready) {
+    return <div className="min-h-[100dvh] bg-[var(--background)]" />
+  }
 
   // identity gate
   if (myId === null) {

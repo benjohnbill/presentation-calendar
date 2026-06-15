@@ -12,16 +12,18 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
   const anchors = monthAnchors(today, MONTHS)
   const windowDates = monthWindowDates(today, MONTHS)
 
-  const [members, avail, sessionRows] = await Promise.all([
+  // All four reads are independent — fetch in one parallel batch so the
+  // timetable view (?date=) does not add a second sequential round-trip.
+  const [members, avail, sessionRows, detail] = await Promise.all([
     getMembers(),
     getAvailabilityByDates(windowDates),
     getSessionDates(),
+    date ? getDateDetail(date) : Promise.resolve(null),
   ])
 
   const availByDate: Record<string, number[]> = {}
   for (const a of avail) (availByDate[a.date] ??= []).push(a.memberId)
 
-  const detail = date ? await getDateDetail(date) : null
   const suggested = detail
     ? computeSuggestedTime(detail.comm.map((c) => ({ start: c.timeStart, end: c.timeEnd })), 4)
     : null

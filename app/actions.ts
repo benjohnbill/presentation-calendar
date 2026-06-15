@@ -102,22 +102,27 @@ export async function commit(
     await db.insert(sessions).values({ date }).onConflictDoNothing()
     await db.insert(notifications).values({ date, eventType: 'session_created' }).onConflictDoNothing()
 
-    const all = await db.select().from(members)
-    const byId = new Map(all.map((m) => [m.id, m]))
-    const windows = comm.map((c) => ({ start: c.timeStart, end: c.timeEnd }))
-    const lines = comm.map((c) => `${byId.get(c.memberId)?.name ?? '?'}  ${formatWindow({ start: c.timeStart, end: c.timeEnd })}`)
-    const suggested = computeSuggestedTime(windows, 4)
-    const mentionIds = comm.map((c) => byId.get(c.memberId)?.discordId).filter(Boolean) as string[]
-    await postToDiscord(buildSessionCreated({ date, lines, suggested, mentionIds, url: dateUrl(date) }))
+    // Build + send the ping off the response path so the confirm returns fast.
+    after(async () => {
+      const all = await db.select().from(members)
+      const byId = new Map(all.map((m) => [m.id, m]))
+      const windows = comm.map((c) => ({ start: c.timeStart, end: c.timeEnd }))
+      const lines = comm.map((c) => `${byId.get(c.memberId)?.name ?? '?'}  ${formatWindow({ start: c.timeStart, end: c.timeEnd })}`)
+      const suggested = computeSuggestedTime(windows, 4)
+      const mentionIds = comm.map((c) => byId.get(c.memberId)?.discordId).filter(Boolean) as string[]
+      await postToDiscord(buildSessionCreated({ date, lines, suggested, mentionIds, url: dateUrl(date) }))
+    })
   } else if (isNewCommitter && sessionExisted) {
     // Late join: a new person commits to an already-created session. Quiet (no ping),
     // showing who joined, the new count, and the (possibly shifted) suggested time.
-    const all = await db.select().from(members)
-    const byId = new Map(all.map((m) => [m.id, m]))
-    const windows = comm.map((c) => ({ start: c.timeStart, end: c.timeEnd }))
-    const suggested = computeSuggestedTime(windows, 4)
-    const joinerName = byId.get(memberId)?.name ?? '?'
-    await postToDiscord(buildLateJoin({ date, joinerName, count: comm.length, suggested, url: dateUrl(date) }))
+    after(async () => {
+      const all = await db.select().from(members)
+      const byId = new Map(all.map((m) => [m.id, m]))
+      const windows = comm.map((c) => ({ start: c.timeStart, end: c.timeEnd }))
+      const suggested = computeSuggestedTime(windows, 4)
+      const joinerName = byId.get(memberId)?.name ?? '?'
+      await postToDiscord(buildLateJoin({ date, joinerName, count: comm.length, suggested, url: dateUrl(date) }))
+    })
   }
 
   revalidatePath('/')
