@@ -18,89 +18,251 @@ type Props = {
   onAddTopic: (text: string) => void
 }
 
-const HOURS = Array.from({ length: 13 }, (_, i) => 12 + i) // 12:00 .. 24:00
+// Display window: noon → midnight (the group meets in the evening).
+const DAY_START = 12 * 60
+const DAY_END = 24 * 60
+const SPAN = DAY_END - DAY_START
+const HOUR_TICKS = [12, 14, 16, 18, 20, 22, 24]
 
-export function DateDetail({ date, members, commits, topics, suggested, myId, onCommit, onUncommit, onAddTopic }: Props) {
+const toMin = (s: string | null, fallback: number) =>
+  s ? Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5)) : fallback
+const clamp = (n: number) => Math.max(DAY_START, Math.min(DAY_END, n))
+const pct = (min: number) => ((clamp(min) - DAY_START) / SPAN) * 100
+
+export function DateDetail({
+  date, members, commits, topics, suggested, myId, onCommit, onUncommit, onAddTopic,
+}: Props) {
   const [start, setStart] = useState('19:00')
   const [end, setEnd] = useState('')
   const [anytime, setAnytime] = useState(false)
   const [topic, setTopic] = useState('')
   const byMember = new Map(commits.map((c) => [c.memberId, c]))
+  const n = members.length
+  const iCommitted = byMember.has(myId)
+
+  const mmdd = `${Number(date.slice(5, 7))}월 ${Number(date.slice(8, 10))}일`
+  const bandTop = suggested ? pct(toMin(suggested.start, DAY_START)) : 0
+  const bandBottom = suggested ? pct(toMin(suggested.end, DAY_END)) : 0
 
   return (
-    <div className="rounded-xl border p-4">
-      <h2 className="mb-3 text-lg font-semibold">{date} 시간표</h2>
+    <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+      <header className="mb-4 flex items-baseline justify-between">
+        <h2 className="text-base font-semibold tracking-tight sm:text-lg">{mmdd} 시간표</h2>
+        <span className="text-xs text-stone-400">{commits.length}명 참석</span>
+      </header>
 
-      <div className="flex gap-2 overflow-x-auto">
-        {members.map((m) => {
-          const c = byMember.get(m.id)
-          return (
-            <div key={m.id} className="min-w-[64px] text-center">
-              <div className="mb-1 text-xs font-medium">{m.name}</div>
-              <div className="relative h-48 w-14 rounded bg-gray-50">
-                {c && <Bar start={c.timeStart} end={c.timeEnd} suggested={suggested} />}
+      {/* timetable: time axis + a column per member, overlap band across all */}
+      <div className="flex gap-1.5">
+        {/* time axis gutter */}
+        <div className="w-8 shrink-0 sm:w-9">
+          <div className="h-5" />
+          <div className="relative h-56 sm:h-72">
+            {HOUR_TICKS.map((h) => (
+              <span
+                key={h}
+                className="absolute right-1 -translate-y-1/2 text-[10px] tabular-nums text-stone-400"
+                style={{ top: `${pct(h * 60)}%` }}
+              >
+                {h}
+              </span>
+            ))}
+          </div>
+          <div className="h-4" />
+        </div>
+
+        {/* columns area */}
+        <div className="min-w-0 flex-1">
+          {/* member names */}
+          <div className="flex h-5">
+            {members.map((m) => (
+              <div
+                key={m.id}
+                className={`min-w-0 flex-1 truncate px-0.5 text-center text-[11px] font-medium sm:text-xs ${
+                  m.id === myId ? 'text-orange-600' : byMember.has(m.id) ? 'text-stone-700' : 'text-stone-300'
+                }`}
+              >
+                {m.name}
               </div>
-              <div className="mt-1 text-[10px] text-gray-500">
-                {c ? formatWindow({ start: c.timeStart, end: c.timeEnd }) : '-'}
-              </div>
-            </div>
-          )
-        })}
+            ))}
+          </div>
+
+          {/* chart */}
+          <div className="relative h-56 overflow-hidden rounded-xl border border-stone-200 bg-stone-50/60 sm:h-72">
+            {/* hour gridlines */}
+            {HOUR_TICKS.map((h) => (
+              <div
+                key={h}
+                className="absolute inset-x-0 border-t border-stone-200/70"
+                style={{ top: `${pct(h * 60)}%` }}
+              />
+            ))}
+
+            {/* column separators */}
+            {members.slice(1).map((m, i) => (
+              <div
+                key={m.id}
+                className="absolute inset-y-0 border-l border-stone-200/50"
+                style={{ left: `${((i + 1) * 100) / n}%` }}
+              />
+            ))}
+
+            {/* overlap band — the signature: when >=4 are free at once */}
+            {suggested && bandBottom > bandTop && (
+              <div
+                className="pointer-events-none absolute inset-x-0 border-y-2 border-dashed border-emerald-500/70 bg-emerald-400/15"
+                style={{ top: `${bandTop}%`, height: `${bandBottom - bandTop}%` }}
+                aria-label={`다 같이 가능한 시간 ${suggested.start}~${suggested.end}`}
+              />
+            )}
+
+            {/* per-member availability bars */}
+            {members.map((m, i) => {
+              const c = byMember.get(m.id)
+              if (!c) return null
+              const top = pct(toMin(c.timeStart, DAY_START))
+              const bottom = pct(toMin(c.timeEnd, DAY_END))
+              if (bottom <= top) return null
+              const isMe = m.id === myId
+              return (
+                <div
+                  key={m.id}
+                  className="absolute px-1"
+                  style={{ left: `${(i * 100) / n}%`, width: `${100 / n}%`, top: `${top}%`, height: `${bottom - top}%` }}
+                >
+                  <div
+                    className={`h-full w-full rounded-md ${
+                      isMe ? 'bg-orange-500' : 'bg-orange-400/85'
+                    } shadow-[0_1px_3px_rgba(249,115,22,0.35)] ring-1 ring-orange-500/30`}
+                  />
+                </div>
+              )
+            })}
+          </div>
+
+          {/* per-member window labels */}
+          <div className="mt-1 flex">
+            {members.map((m) => {
+              const c = byMember.get(m.id)
+              return (
+                <div
+                  key={m.id}
+                  className="min-w-0 flex-1 truncate px-0.5 text-center text-[9px] leading-tight text-stone-500 sm:text-[10px]"
+                >
+                  {c ? formatWindow({ start: c.timeStart, end: c.timeEnd }) : '–'}
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
-      {suggested && (
-        <p className="mt-3 text-sm text-orange-600">✨ 다 겹치는 시간: {suggested.start}~{suggested.end}</p>
+      {suggested ? (
+        <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+          <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500 align-middle" />
+          다 같이 되는 시간 <span className="font-semibold">{suggested.start}~{suggested.end}</span> — 이때 어때요?
+        </p>
+      ) : (
+        commits.length > 0 && (
+          <p className="mt-4 rounded-lg bg-stone-100 px-3 py-2 text-sm text-stone-500">
+            아직 4명이 겹치는 시간대가 없어요. 가능 시간을 남겨주세요.
+          </p>
+        )
       )}
 
-      <div className="mt-4 space-y-2 border-t pt-4">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={anytime} onChange={(e) => setAnytime(e.target.checked)} /> 시간무관
+      {/* commit form */}
+      <div className="mt-4 space-y-3 border-t border-stone-200 pt-4">
+        <p className="text-sm font-medium text-stone-700">내 가능 시간</p>
+        <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-stone-600">
+          <input
+            type="checkbox"
+            checked={anytime}
+            onChange={(e) => setAnytime(e.target.checked)}
+            className="h-4 w-4 accent-orange-500"
+          />
+          시간무관 (아무 때나 OK)
         </label>
         {!anytime && (
-          <div className="flex items-center gap-2 text-sm">
-            <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="rounded border px-2 py-1" />
-            ~
-            <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="rounded border px-2 py-1" placeholder="(이후)" />
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <input
+              type="time"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              className="rounded-lg border border-stone-300 px-2.5 py-1.5 tabular-nums focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+            />
+            <span className="text-stone-400">~</span>
+            <input
+              type="time"
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+              className="rounded-lg border border-stone-300 px-2.5 py-1.5 tabular-nums focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+            />
+            <span className="text-xs text-stone-400">끝 시간 비우면 &ldquo;{start || '19:00'}~&rdquo;</span>
           </div>
         )}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
+            type="button"
             onClick={() => onCommit(anytime ? { start: null, end: null } : { start: start || null, end: end || null })}
-            className="rounded-lg bg-black px-4 py-1.5 text-sm text-white"
+            className="rounded-xl bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 active:scale-[0.98]"
           >
-            하자 (참석)
+            {iCommitted ? '시간 수정' : '하자 (참석)'}
           </button>
-          {byMember.has(myId) && (
-            <button onClick={onUncommit} className="rounded-lg bg-gray-100 px-4 py-1.5 text-sm">참석 취소</button>
+          {iCommitted && (
+            <button
+              type="button"
+              onClick={onUncommit}
+              className="rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-50"
+            >
+              참석 취소
+            </button>
           )}
         </div>
       </div>
 
-      <div className="mt-4 border-t pt-4">
-        <div className="mb-1 text-sm font-medium">발표자/주제</div>
-        <ul className="mb-2 text-sm text-gray-700">
-          {topics.map((t, i) => {
-            const name = members.find((m) => m.id === t.presenterId)?.name ?? '?'
-            return <li key={i}>· {name}: {t.text}</li>
-          })}
-        </ul>
+      {/* topics */}
+      <div className="mt-4 border-t border-stone-200 pt-4">
+        <p className="mb-2 text-sm font-medium text-stone-700">발표자 / 주제 <span className="font-normal text-stone-400">(선택)</span></p>
+        {topics.length > 0 && (
+          <ul className="mb-3 space-y-1">
+            {topics.map((t, i) => {
+              const name = members.find((m) => m.id === t.presenterId)?.name ?? '?'
+              return (
+                <li key={i} className="flex gap-2 text-sm text-stone-700">
+                  <span className="font-medium text-stone-900">{name}</span>
+                  <span className="text-stone-400">·</span>
+                  <span>{t.text}</span>
+                </li>
+              )
+            })}
+          </ul>
+        )}
         <div className="flex gap-2">
-          <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="뭐 할지 (선택)" className="flex-1 rounded border px-2 py-1 text-sm" />
-          <button onClick={() => { if (topic) { onAddTopic(topic); setTopic('') } }} className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm">추가</button>
+          <input
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && topic) {
+                onAddTopic(topic)
+                setTopic('')
+              }
+            }}
+            placeholder="뭐 발표할지 (선택)"
+            className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-1.5 text-sm focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (topic) {
+                onAddTopic(topic)
+                setTopic('')
+              }
+            }}
+            className="shrink-0 rounded-lg border border-stone-300 bg-white px-4 py-1.5 text-sm font-medium text-stone-600 transition hover:bg-stone-50"
+          >
+            추가
+          </button>
         </div>
       </div>
-    </div>
+    </section>
   )
-}
-
-function Bar({ start, end, suggested }: { start: string | null; end: string | null; suggested: { start: string; end: string } | null }) {
-  const dayStart = 12 * 60
-  const dayEnd = 24 * 60
-  const span = dayEnd - dayStart
-  const toMin = (s: string | null, fallback: number) => (s ? Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5)) : fallback)
-  const s = Math.max(toMin(start, dayStart), dayStart)
-  const e = Math.min(toMin(end, dayEnd), dayEnd)
-  const top = ((s - dayStart) / span) * 100
-  const height = ((e - s) / span) * 100
-  return <div className="absolute left-1 right-1 rounded bg-orange-400/70" style={{ top: `${top}%`, height: `${height}%` }} />
 }
