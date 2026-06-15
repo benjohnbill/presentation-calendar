@@ -4,7 +4,7 @@ import type { ComponentType } from 'react'
 import { useRouter } from 'next/navigation'
 import { NamePicker, useIdentity } from './NamePicker'
 import { MonthCalendar } from './MonthCalendar'
-import { DateDetail } from './DateDetail'
+import { TimetableCarousel } from './TimetableCarousel'
 import { SessionsView } from './SessionsView'
 import { CalendarIcon, ClockIcon, CheckCircleIcon } from './icons'
 import { applyAvailability, commit, uncommit, addTopic } from '../actions'
@@ -27,8 +27,12 @@ export function AppShell(props: {
   availByDate: Record<string, number[]>
   sessionDates: string[]
   openDate: string | null
-  detail: { comm: { memberId: number; timeStart: string | null; timeEnd: string | null }[]; tops: { presenterId: number; text: string }[] } | null
-  suggested: { start: string; end: string } | null
+  timetableDays: {
+    date: string
+    comm: { memberId: number; timeStart: string | null; timeEnd: string | null }[]
+    tops: { presenterId: number; text: string }[]
+    suggested: { start: string; end: string } | null
+  }[]
   upcoming: { date: string }[]
   past: { date: string }[]
 }) {
@@ -91,40 +95,25 @@ export function AppShell(props: {
         />
       )}
 
-      {view === 'timetable' &&
-        (props.openDate && props.detail ? (
-          <DateDetail
-            date={props.openDate}
-            members={props.members}
-            commits={props.detail.comm}
-            topics={props.detail.tops}
-            suggested={props.suggested}
-            myId={myId}
-            onCommit={async (w) => {
-              await commit(myId, props.openDate!, w)
-              router.refresh()
-            }}
-            onUncommit={async () => {
-              await uncommit(myId, props.openDate!)
-              router.refresh()
-            }}
-            onAddTopic={async (t) => {
-              await addTopic(myId, props.openDate!, t)
-              router.refresh()
-            }}
-          />
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center text-center text-sm text-stone-400">
-            <ClockIcon className="mb-2 h-8 w-8 text-stone-300" />
-            <p>
-              <button onClick={() => setView('agree')} className="font-medium text-orange-600 underline">
-                잠정결론 맞추기
-              </button>
-              에서 4명 이상 모인 날의
-            </p>
-            <p>&ldquo;시간표 →&rdquo;를 누르면 여기 열려요.</p>
-          </div>
-        ))}
+      {view === 'timetable' && (
+        <TimetableCarousel
+          key={props.openDate ?? 'first'}
+          days={props.timetableDays}
+          members={props.members}
+          myId={myId}
+          initialDate={props.openDate}
+          onCommit={async (date, w) => {
+            await commit(myId, date, w) // revalidatePath in the action refreshes the RSC
+          }}
+          onUncommit={async (date) => {
+            await uncommit(myId, date)
+          }}
+          onAddTopic={async (date, t) => {
+            await addTopic(myId, date, t)
+          }}
+          onGoCalendar={() => setView('agree')}
+        />
+      )}
 
       {view === 'sessions' && <SessionsView upcoming={props.upcoming} past={props.past} />}
     </>

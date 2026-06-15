@@ -1,5 +1,6 @@
 import { getMembers, getAvailabilityByDates, getSessionDates, getDateDetail } from '@/data/queries'
 import { computeSuggestedTime } from '@/domain/suggestedTime'
+import { THRESHOLD } from '@/domain/thresholds'
 import { monthAnchors, monthWindowDates, todayKst } from '@/lib/calendar'
 import { AppShell } from './_components/AppShell'
 
@@ -12,21 +13,31 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
   const anchors = monthAnchors(today, MONTHS)
   const windowDates = monthWindowDates(today, MONTHS)
 
-  // All four reads are independent — fetch in one parallel batch so the
-  // timetable view (?date=) does not add a second sequential round-trip.
-  const [members, avail, sessionRows, detail] = await Promise.all([
+  const [members, avail, sessionRows] = await Promise.all([
     getMembers(),
     getAvailabilityByDates(windowDates),
     getSessionDates(),
-    date ? getDateDetail(date) : Promise.resolve(null),
   ])
 
   const availByDate: Record<string, number[]> = {}
   for (const a of avail) (availByDate[a.date] ??= []).push(a.memberId)
 
-  const suggested = detail
-    ? computeSuggestedTime(detail.comm.map((c) => ({ start: c.timeStart, end: c.timeEnd })), 4)
-    : null
+  // Timetable targets: upcoming days where THRESHOLD+ members are available.
+  // Fetch every target's detail so the timetable can be a swipeable carousel.
+  const targetDates = Object.keys(availByDate)
+    .filter((d) => d >= todayStr && availByDate[d].length >= THRESHOLD)
+    .sort()
+  const timetableDays = await Promise.all(
+    targetDates.map(async (d) => {
+      const det = await getDateDetail(d)
+      return {
+        date: d,
+        comm: det.comm,
+        tops: det.tops,
+        suggested: computeSuggestedTime(det.comm.map((c) => ({ start: c.timeStart, end: c.timeEnd })), THRESHOLD),
+      }
+    }),
+  )
 
   const sessionDates = sessionRows.map((s) => s.date)
   const upcoming = sessionRows.filter((s) => s.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date))
@@ -40,8 +51,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
       availByDate={availByDate}
       sessionDates={sessionDates}
       openDate={date ?? null}
-      detail={detail}
-      suggested={suggested}
+      timetableDays={timetableDays}
       upcoming={upcoming}
       past={past}
     />
