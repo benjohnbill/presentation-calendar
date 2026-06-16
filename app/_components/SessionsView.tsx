@@ -31,6 +31,7 @@ export function SessionsView({
   const [openDate, setOpenDate] = useState<string | null>(null)
   const toggle = (d: string) => setOpenDate((cur) => (cur === d ? null : d))
 
+  // panel mounts only while its row is open, so its local form state (time/url/label) resets on close — intentional for v1
   const panel = (s: SessionRecord) => (
     <SessionRecordPanel
       date={s.date}
