@@ -1,5 +1,5 @@
 import { db } from '@/db/client'
-import { members, availabilities, commits, sessions, topics } from '@/db/schema'
+import { members, availabilities, commits, sessions, topics, materials } from '@/db/schema'
 import { eq, inArray } from 'drizzle-orm'
 
 export async function getMembers() {
@@ -23,4 +23,14 @@ export async function getDateDetail(date: string) {
     db.select().from(topics).where(eq(topics.date, date)),
   ])
   return { avail, comm, tops }
+}
+
+export async function getTopicsByDates(dates: string[]) {
+  if (dates.length === 0) return [] as { date: string; presenterId: number; text: string }[]
+  return db.select().from(topics).where(inArray(topics.date, dates))
+}
+
+export async function getMaterialsByDates(dates: string[]) {
+  if (dates.length === 0) return [] as { id: number; date: string; presenterId: number; url: string; label: string | null }[]
+  return db.select().from(materials).where(inArray(materials.date, dates))
 }
