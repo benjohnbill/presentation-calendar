@@ -1,9 +1,10 @@
-import { pgTable, serial, text, date, time, timestamp, integer, unique } from 'drizzle-orm/pg-core'
+import { pgTable, serial, text, date, time, timestamp, integer, unique, boolean } from 'drizzle-orm/pg-core'
 
 export const members = pgTable('members', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
   discordId: text('discord_id').notNull(),
+  isAdmin: boolean('is_admin').notNull().default(false),
 })
 
 export const availabilities = pgTable(

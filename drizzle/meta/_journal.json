@@ -15,6 +15,13 @@
       "when": 1781627675107,
       "tag": "0001_gorgeous_caretaker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781629920299,
+      "tag": "0002_furry_psynapse",
+      "breakpoints": true
     }
   ]
 }
