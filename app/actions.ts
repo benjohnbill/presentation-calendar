@@ -140,6 +140,7 @@ export async function addTopic(memberId: number, date: string, text: string) {
 }
 
 export async function addMaterial(date: string, presenterId: number, url: string, label: string | null) {
+  if (!/^https?:\/\//i.test(url)) throw new Error('URL must start with http:// or https://')
   await db.insert(materials).values({ date, presenterId, url, label })
   revalidatePath('/')
 }
