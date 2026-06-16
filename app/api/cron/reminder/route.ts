@@ -4,6 +4,8 @@ import { and, eq } from 'drizzle-orm'
 import { toKstDateString } from '@/lib/dates'
 import { buildReminder } from '@/notify/messages'
 import { postToDiscord } from '@/notify/discord'
+import { computeSuggestedTime } from '@/domain/suggestedTime'
+import { THRESHOLD } from '@/domain/thresholds'
 
 export async function GET(req: Request) {
   const auth = req.headers.get('authorization')
@@ -26,8 +28,12 @@ export async function GET(req: Request) {
     const all = await db.select().from(members)
     const byId = new Map(all.map((m) => [m.id, m]))
     const mentionIds = comm.map((c) => byId.get(c.memberId)?.discordId).filter(Boolean) as string[]
+    const suggested = computeSuggestedTime(
+      comm.map((c) => ({ start: c.timeStart, end: c.timeEnd })),
+      THRESHOLD,
+    )
     const base = process.env.NEXT_PUBLIC_BASE_URL ?? ''
-    await postToDiscord(buildReminder({ date: s.date, mentionIds, url: `${base}/?date=${s.date}` }))
+    await postToDiscord(buildReminder({ date: s.date, mentionIds, url: `${base}/?date=${s.date}`, suggested }))
   }
 
   return Response.json({ ok: true, reminded: todays.length })
