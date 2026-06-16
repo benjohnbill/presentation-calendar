@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 type Member = { id: number; name: string }
 type Topic = { presenterId: number; text: string }
@@ -18,7 +18,7 @@ export function SessionRecordPanel({
   onRemoveMaterial: (id: number) => Promise<void>
   onSetFinalTime: (date: string, time: string | null) => Promise<void>
 }) {
-  const nameById = new Map(members.map((m) => [m.id, m.name]))
+  const nameById = useMemo(() => new Map(members.map((m) => [m.id, m.name])), [members])
   const [time, setTime] = useState(finalTime ? finalTime.slice(0, 5) : '')
   const [presenterId, setPresenterId] = useState<number>(members[0]?.id ?? 0)
   const [url, setUrl] = useState('')
@@ -34,6 +34,7 @@ export function SessionRecordPanel({
             type="time"
             value={time}
             onChange={(e) => setTime(e.target.value)}
+            aria-label="최종 시간"
             className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm tabular-nums focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
           />
           <button
@@ -89,6 +90,7 @@ export function SessionRecordPanel({
           <select
             value={presenterId}
             onChange={(e) => setPresenterId(Number(e.target.value))}
+            aria-label="발표자 선택"
             className="rounded-lg border border-stone-300 px-2 py-1.5 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
           >
             {members.map((m) => (
