@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { availabilities, commits, sessions, notifications, members, topics } from '@/db/schema'
+import { availabilities, commits, sessions, notifications, members, topics, materials } from '@/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { after } from 'next/server'
@@ -136,5 +136,20 @@ export async function uncommit(memberId: number, date: string) {
 
 export async function addTopic(memberId: number, date: string, text: string) {
   await db.insert(topics).values({ date, presenterId: memberId, text })
+  revalidatePath('/')
+}
+
+export async function addMaterial(date: string, presenterId: number, url: string, label: string | null) {
+  await db.insert(materials).values({ date, presenterId, url, label })
+  revalidatePath('/')
+}
+
+export async function removeMaterial(id: number) {
+  await db.delete(materials).where(eq(materials.id, id))
+  revalidatePath('/')
+}
+
+export async function setFinalTime(date: string, time: string | null) {
+  await db.update(sessions).set({ finalTime: time }).where(eq(sessions.date, date))
   revalidatePath('/')
 }
