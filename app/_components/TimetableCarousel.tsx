@@ -98,7 +98,10 @@ export function TimetableCarousel({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    // min-h-full (not h-full): fills the scroll area when content is short, but
+    // grows past it when the DateDetail card is tall, so <main>'s overflow-y-auto
+    // can scroll vertically to the commit form. Horizontal swipe stays clipped below.
+    <div className="flex min-h-full flex-col">
       {/* header + position */}
       <div className="mb-3 flex items-center justify-between">
         <button
