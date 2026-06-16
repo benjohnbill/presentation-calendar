@@ -32,6 +32,15 @@ Attendance does not require presenting (listening-only is fine), though regulars
 something.
 _Avoid_: Speaker, host (Host is the Program role)
 
+**Material (발표 자료)**:
+The slide deck (or equivalent) a Presenter actually used at a Session — the record of what
+was presented, attached after the session rather than before. The backward-looking
+counterpart to a Topic: a Topic is the forward-looking *plan* entered during the flow ("what
+I intend to present"), a Material is the *result* ("what was actually presented"). Optional,
+0..N per Session, each tied to a Presenter. Pure record — non-gating, drives nothing.
+_Avoid_: Attachment, upload, file (these name the storage mechanism, not the artifact);
+Topic (Topic is the plan, Material is the result)
+
 **Program (프로그램)**:
 A separate, *host-driven, non-presentation* activity event — movie night, TRPG, board games,
 drinks. One member (the Host) decides on it for a date and recruits others via a Discord
@@ -79,6 +88,16 @@ condition for Session Created — purely informational, sits on top of the alrea
 decision. May not exist if members' times never overlap enough.
 _Avoid_: Confirmed time, locked time (the time is never locked by the system; humans finalize)
 
+**Final Time (최종 시간)**:
+The precise meeting time the group actually settles on — chosen by humans (in KakaoTalk),
+not computed. Optionally recorded back into the app by hand as a plain note, primarily for the
+record (the session's card/history) rather than to drive anything. Distinct from Suggested
+Time, which the system *computes* as an overlap window: a Final Time is what people *chose*, a
+Suggested Time is what the app *proposes*. Non-locking and non-gating — freely edited, and the
+system never finalizes or locks time itself.
+_Avoid_: Confirmed time, 확정 (retired — the time is recorded, never system-locked); Suggested
+Time (proposal vs. chosen)
+
 **Provisional Establish (잠정 성립)**:
 The automatic state a date enters the moment enough members mark Available (the availability
 threshold, currently 4). Detected by the system, not yet committed. Triggers a notification
@@ -113,6 +132,14 @@ no login) plus that member's Discord user ID, filled in once by hand so the app 
 Discord mentions at exactly the relevant people. Closed set (the friend group), not open
 self-signup.
 _Avoid_: User list, members table
+
+**Admin (어드민)**:
+A single designated Member (진근) trusted with the group's *destructive* and *maintenance*
+actions — cancelling a created Session, and keeping the Roster current. Not an organizer:
+Sessions stay emergent and role-less (see the note below), and the Admin appears only for
+actions that undo or edit, never to drive the normal additive flow. The authority is
+honor-system, the same trust model as identity itself — social, not enforced by login.
+_Avoid_: Organizer, Host (Host is the Program role; the Admin does not run Sessions)
 
 _No Organizer role (with one deliberate asymmetry)._ An earlier design had one member "press
 confirm"; that was dissolved. Session Created is emergent from collective Commit, so there is
