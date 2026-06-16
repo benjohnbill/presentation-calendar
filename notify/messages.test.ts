@@ -38,10 +38,18 @@ describe('buildSessionCreated', () => {
 })
 
 describe('buildReminder', () => {
-  it('reminds committed members of today session', () => {
-    const msg = buildReminder({ date: '2026-06-20', mentionIds: ['111'], url })
+  it('includes the suggested window when present', () => {
+    const msg = buildReminder({
+      date: '2026-06-20', mentionIds: ['111'], url, suggested: { start: '19:00', end: '22:00' },
+    })
     expect(msg.content).toContain('2026-06-20')
+    expect(msg.content).toContain('19:00~22:00')
     expect(msg.allowed_mentions).toEqual({ users: ['111'] })
+  })
+  it('falls back to "카톡 확인" when there is no overlap', () => {
+    const msg = buildReminder({ date: '2026-06-20', mentionIds: ['111'], url, suggested: null })
+    expect(msg.content).toContain('카톡 확인')
+    expect(msg.content).not.toContain('겹친 시간')
   })
 })
 

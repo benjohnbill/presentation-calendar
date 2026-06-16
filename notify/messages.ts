@@ -34,9 +34,17 @@ export function buildSessionCreated(a: {
   }
 }
 
-export function buildReminder(a: { date: string; mentionIds: string[]; url: string }): DiscordMessage {
+export function buildReminder(a: {
+  date: string
+  mentionIds: string[]
+  url: string
+  suggested: { start: string; end: string } | null
+}): DiscordMessage {
+  const timeLine = a.suggested
+    ? `겹친 시간 ${a.suggested.start}~${a.suggested.end} — 최종은 카톡 확인.`
+    : `시간은 카톡 확인.`
   return {
-    content: `⏰ 오늘 ${a.date} 세션 있어요! 시간은 카톡 확인.\n👉 ${a.url}\n${mentions(a.mentionIds)}`,
+    content: `⏰ 오늘 ${a.date} 세션! ${timeLine}\n👉 ${a.url}\n${mentions(a.mentionIds)}`,
     allowed_mentions: { users: a.mentionIds },
   }
 }
