@@ -6,8 +6,9 @@ import { NamePicker, useIdentity } from './NamePicker'
 import { MonthCalendar } from './MonthCalendar'
 import { TimetableCarousel } from './TimetableCarousel'
 import { SessionsView } from './SessionsView'
+import type { SessionRecord } from './SessionsView'
 import { CalendarIcon, ClockIcon, CheckCircleIcon } from './icons'
-import { applyAvailability, commit, uncommit, addTopic } from '../actions'
+import { applyAvailability, commit, uncommit, addTopic, addMaterial, removeMaterial, setFinalTime } from '../actions'
 import type { MonthAnchor } from '@/lib/calendar'
 import { buildColorMap, buildInkMap } from '@/lib/calendar'
 
@@ -33,8 +34,8 @@ export function AppShell(props: {
     tops: { presenterId: number; text: string }[]
     suggested: { start: string; end: string } | null
   }[]
-  upcoming: { date: string }[]
-  past: { date: string }[]
+  upcoming: SessionRecord[]
+  past: SessionRecord[]
 }) {
   const router = useRouter()
   const { id: myId, ready, pick } = useIdentity()
@@ -114,7 +115,16 @@ export function AppShell(props: {
         />
       )}
 
-      {view === 'sessions' && <SessionsView upcoming={props.upcoming} past={props.past} />}
+      {view === 'sessions' && (
+        <SessionsView
+          upcoming={props.upcoming}
+          past={props.past}
+          members={props.members}
+          onAddMaterial={addMaterial}
+          onRemoveMaterial={removeMaterial}
+          onSetFinalTime={setFinalTime}
+        />
+      )}
     </>
   )
 
