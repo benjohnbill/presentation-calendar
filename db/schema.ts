@@ -31,6 +31,7 @@ export const commits = pgTable(
 export const sessions = pgTable('sessions', {
   id: serial('id').primaryKey(),
   date: date('date').notNull().unique(),
+  finalTime: time('final_time'), // null until the group records the agreed start (humans finalize)
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
@@ -39,6 +40,15 @@ export const topics = pgTable('topics', {
   date: date('date').notNull(),
   presenterId: integer('presenter_id').notNull().references(() => members.id),
   text: text('text').notNull(),
+})
+
+export const materials = pgTable('materials', {
+  id: serial('id').primaryKey(),
+  date: date('date').notNull(),
+  presenterId: integer('presenter_id').notNull().references(() => members.id),
+  url: text('url').notNull(),
+  label: text('label'), // optional human label, e.g. "본편 슬라이드"
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
 export const notifications = pgTable(
