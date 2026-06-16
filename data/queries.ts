@@ -26,11 +26,11 @@ export async function getDateDetail(date: string) {
 }
 
 export async function getTopicsByDates(dates: string[]) {
-  if (dates.length === 0) return [] as { date: string; presenterId: number; text: string }[]
+  if (dates.length === 0) return [] as (typeof topics.$inferSelect)[]
   return db.select().from(topics).where(inArray(topics.date, dates))
 }
 
 export async function getMaterialsByDates(dates: string[]) {
-  if (dates.length === 0) return [] as { id: number; date: string; presenterId: number; url: string; label: string | null }[]
+  if (dates.length === 0) return [] as (typeof materials.$inferSelect)[]
   return db.select().from(materials).where(inArray(materials.date, dates))
 }
