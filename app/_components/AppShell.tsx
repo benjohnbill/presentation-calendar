@@ -8,11 +8,11 @@ import { TimetableCarousel } from './TimetableCarousel'
 import { SessionsView } from './SessionsView'
 import type { SessionRecord } from './SessionsView'
 import { CalendarIcon, ClockIcon, CheckCircleIcon } from './icons'
-import { applyAvailability, commit, uncommit, addTopic, addMaterial, removeMaterial, setFinalTime } from '../actions'
+import { applyAvailability, commit, uncommit, addTopic, addMaterial, removeMaterial, setFinalTime, cancelSession } from '../actions'
 import type { MonthAnchor } from '@/lib/calendar'
 import { buildColorMap, buildInkMap } from '@/lib/calendar'
 
-type Member = { id: number; name: string }
+type Member = { id: number; name: string; isAdmin: boolean }
 type View = 'agree' | 'timetable' | 'sessions'
 
 const NAV: { key: View; label: string; Icon: ComponentType<{ className?: string }> }[] = [
@@ -120,9 +120,11 @@ export function AppShell(props: {
           upcoming={props.upcoming}
           past={props.past}
           members={props.members}
+          myId={myId}
           onAddMaterial={addMaterial}
           onRemoveMaterial={removeMaterial}
           onSetFinalTime={setFinalTime}
+          onCancelSession={async (date) => { await cancelSession(myId, date) }}
         />
       )}
     </>

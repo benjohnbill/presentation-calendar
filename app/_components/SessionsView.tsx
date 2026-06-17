@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { SessionRecordPanel } from './SessionRecordPanel'
 
-type Member = { id: number; name: string }
+type Member = { id: number; name: string; isAdmin: boolean }
 type Topic = { presenterId: number; text: string }
 type Material = { id: number; presenterId: number; url: string; label: string | null }
 export type SessionRecord = {
@@ -18,15 +18,17 @@ function fmt(date: string) {
 }
 
 export function SessionsView({
-  upcoming, past, members,
-  onAddMaterial, onRemoveMaterial, onSetFinalTime,
+  upcoming, past, members, myId,
+  onAddMaterial, onRemoveMaterial, onSetFinalTime, onCancelSession,
 }: {
   upcoming: SessionRecord[]
   past: SessionRecord[]
   members: Member[]
+  myId: number
   onAddMaterial: (date: string, presenterId: number, url: string, label: string | null) => Promise<void>
   onRemoveMaterial: (id: number) => Promise<void>
   onSetFinalTime: (date: string, time: string | null) => Promise<void>
+  onCancelSession: (date: string) => Promise<void>
 }) {
   const [openDate, setOpenDate] = useState<string | null>(null)
   const toggle = (d: string) => setOpenDate((cur) => (cur === d ? null : d))
@@ -39,9 +41,11 @@ export function SessionsView({
       topics={s.topics}
       materials={s.materials}
       members={members}
+      isAdmin={members.find((m) => m.id === myId)?.isAdmin ?? false}
       onAddMaterial={onAddMaterial}
       onRemoveMaterial={onRemoveMaterial}
       onSetFinalTime={onSetFinalTime}
+      onCancelSession={onCancelSession}
     />
   )
 

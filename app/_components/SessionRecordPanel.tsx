@@ -1,28 +1,31 @@
 'use client'
 import { useMemo, useState } from 'react'
 
-type Member = { id: number; name: string }
+type Member = { id: number; name: string; isAdmin: boolean }
 type Topic = { presenterId: number; text: string }
 type Material = { id: number; presenterId: number; url: string; label: string | null }
 
 export function SessionRecordPanel({
-  date, finalTime, topics, materials, members,
-  onAddMaterial, onRemoveMaterial, onSetFinalTime,
+  date, finalTime, topics, materials, members, isAdmin,
+  onAddMaterial, onRemoveMaterial, onSetFinalTime, onCancelSession,
 }: {
   date: string
   finalTime: string | null
   topics: Topic[]
   materials: Material[]
   members: Member[]
+  isAdmin: boolean
   onAddMaterial: (date: string, presenterId: number, url: string, label: string | null) => Promise<void>
   onRemoveMaterial: (id: number) => Promise<void>
   onSetFinalTime: (date: string, time: string | null) => Promise<void>
+  onCancelSession: (date: string) => Promise<void>
 }) {
   const nameById = useMemo(() => new Map(members.map((m) => [m.id, m.name])), [members])
   const [time, setTime] = useState(finalTime ? finalTime.slice(0, 5) : '')
   const [presenterId, setPresenterId] = useState<number>(members[0]?.id ?? 0)
   const [url, setUrl] = useState('')
   const [label, setLabel] = useState('')
+  const [confirming, setConfirming] = useState(false)
 
   return (
     <div className="mt-2 space-y-4 rounded-xl border border-hairline bg-white p-4">
@@ -124,6 +127,39 @@ export function SessionRecordPanel({
           </button>
         </div>
       </div>
+
+      {/* admin: cancel (destructive, honor-system gated + confirm) */}
+      {isAdmin && (
+        <div className="border-t border-stone-200 pt-3">
+          {confirming ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-stone-600">정말 취소할까요? 되돌릴 수 없어요.</span>
+              <button
+                type="button"
+                onClick={() => { onCancelSession(date); setConfirming(false) }}
+                className="rounded-full bg-[#d23] px-4 py-1.5 text-sm font-semibold text-white transition active:scale-[0.97]"
+              >
+                취소 확정
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirming(false)}
+                className="rounded-full border border-stone-300 bg-white px-4 py-1.5 text-sm font-medium text-stone-600"
+              >
+                아니요
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              className="text-sm font-medium text-[#d23] hover:underline"
+            >
+              세션 취소
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
