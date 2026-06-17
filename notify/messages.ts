@@ -52,6 +52,13 @@ export function buildReminder(a: {
 // Late join: a NEW member commits to an already-created session.
 // Quiet by design — no pings (empty allowed_mentions). Shows the joiner, the new
 // count, and the (possibly shifted) suggested time so people see the picture change.
+export function buildCancelled(a: { date: string; mentionIds: string[]; url: string }): DiscordMessage {
+  return {
+    content: `❌ ${a.date} 세션이 취소됐어요.\n👉 ${a.url}\n${mentions(a.mentionIds)}`,
+    allowed_mentions: { users: a.mentionIds },
+  }
+}
+
 export function buildLateJoin(a: {
   date: string
   joinerName: string

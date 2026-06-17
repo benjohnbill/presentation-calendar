@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildProvisional, buildSessionCreated, buildReminder, buildLateJoin } from './messages'
+import { buildProvisional, buildSessionCreated, buildReminder, buildLateJoin, buildCancelled } from './messages'
 
 const url = 'https://app.example/d/2026-06-20'
 
@@ -67,5 +67,15 @@ describe('buildLateJoin', () => {
   it('omits the suggested-time line when null', () => {
     const msg = buildLateJoin({ date: '2026-06-20', joinerName: '민지', count: 5, suggested: null, url })
     expect(msg.content).not.toContain('겹치는 시간')
+  })
+})
+
+describe('buildCancelled', () => {
+  it('names the date and targets the committers', () => {
+    const msg = buildCancelled({ date: '2026-06-20', mentionIds: ['111', '222'], url })
+    expect(msg.content).toContain('2026-06-20')
+    expect(msg.content).toContain('취소')
+    expect(msg.content).toContain('<@111>')
+    expect(msg.allowed_mentions).toEqual({ users: ['111', '222'] })
   })
 })
