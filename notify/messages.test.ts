@@ -76,6 +76,8 @@ describe('buildCancelled', () => {
     expect(msg.content).toContain('2026-06-20')
     expect(msg.content).toContain('취소')
     expect(msg.content).toContain('<@111>')
+    expect(msg.content).toContain('<@222>')
+    expect(msg.content).toContain(url)
     expect(msg.allowed_mentions).toEqual({ users: ['111', '222'] })
   })
 })
