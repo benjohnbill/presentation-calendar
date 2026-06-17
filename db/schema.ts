@@ -62,3 +62,12 @@ export const notifications = pgTable(
   },
   (t) => ({ uniqDateEvent: unique().on(t.date, t.eventType) }),
 )
+
+export const programs = pgTable('programs', {
+  id: serial('id').primaryKey(),
+  date: date('date').notNull(),
+  hostId: integer('host_id').notNull().references(() => members.id),
+  label: text('label').notNull(), // e.g. "보드게임", "영화", "TRPG"
+  note: text('note'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
