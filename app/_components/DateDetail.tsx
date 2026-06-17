@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { formatWindow } from '@/domain/time'
+import { selfFirst } from '@/lib/members'
 
 type Member = { id: number; name: string }
 type CommitRow = { memberId: number; timeStart: string | null; timeEnd: string | null }
@@ -39,6 +40,9 @@ export function DateDetail({
   const [anytime, setAnytime] = useState(false)
   const [topic, setTopic] = useState('')
   const byMember = new Map(commits.map((c) => [c.memberId, c]))
+  // My own column reads first (left-most); colours stay keyed by id, so the
+  // palette is unaffected by this display reorder.
+  const ordered = selfFirst(members, myId)
   const n = members.length
   const iCommitted = byMember.has(myId)
 
@@ -76,7 +80,7 @@ export function DateDetail({
         <div className="min-w-0 flex-1">
           {/* member names */}
           <div className="flex h-5">
-            {members.map((m) => (
+            {ordered.map((m) => (
               <div
                 key={m.id}
                 className="min-w-0 flex-1 truncate px-0.5 text-center text-[11px] font-semibold sm:text-xs"
@@ -99,7 +103,7 @@ export function DateDetail({
             ))}
 
             {/* column separators */}
-            {members.slice(1).map((m, i) => (
+            {ordered.slice(1).map((m, i) => (
               <div
                 key={m.id}
                 className="absolute inset-y-0 border-l border-stone-200/50"
@@ -117,7 +121,7 @@ export function DateDetail({
             )}
 
             {/* per-member availability bars */}
-            {members.map((m, i) => {
+            {ordered.map((m, i) => {
               const c = byMember.get(m.id)
               if (!c) return null
               const top = pct(toMin(c.timeStart, DAY_START))
@@ -141,7 +145,7 @@ export function DateDetail({
 
           {/* per-member window labels */}
           <div className="mt-1 flex">
-            {members.map((m) => {
+            {ordered.map((m) => {
               const c = byMember.get(m.id)
               return (
                 <div

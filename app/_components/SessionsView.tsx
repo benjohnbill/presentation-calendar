@@ -1,6 +1,11 @@
 'use client'
-import { useState } from 'react'
+import { useOptimistic, useState, useTransition } from 'react'
 import { SessionRecordPanel } from './SessionRecordPanel'
+import { selfFirst } from '@/lib/members'
+
+// Stable base for useOptimistic: "nothing is being deleted right now". The real
+// props already drop a program once the server action revalidates.
+const NO_DELETES: number[] = []
 
 type Member = { id: number; name: string; isAdmin: boolean }
 type Topic = { presenterId: number; text: string }
@@ -39,6 +44,23 @@ export function SessionsView({
   const [openDate, setOpenDate] = useState<string | null>(null)
   const toggle = (d: string) => setOpenDate((cur) => (cur === d ? null : d))
 
+  // My own name leads the presenter picker (and becomes its default), since
+  // people usually log their own material.
+  const orderedMembers = selfFirst(members, myId)
+
+  // Optimistic program delete: drop the row instantly, then run the server
+  // action inside the transition; revalidation makes it permanent.
+  const [pendingDeletes, addPendingDelete] = useOptimistic(NO_DELETES, (ids: number[], id: number) => [...ids, id])
+  const [, startTransition] = useTransition()
+  const handleDeleteProgram = (id: number) => {
+    startTransition(async () => {
+      addPendingDelete(id)
+      await onDeleteProgram(id)
+    })
+  }
+  const visibleUpcomingPrograms = upcomingPrograms.filter((p) => !pendingDeletes.includes(p.id))
+  const visiblePastPrograms = pastPrograms.filter((p) => !pendingDeletes.includes(p.id))
+
   const [showForm, setShowForm] = useState(false)
   const [pDate, setPDate] = useState('')
   const [pLabel, setPLabel] = useState('')
@@ -48,7 +70,7 @@ export function SessionsView({
     <li key={`prog-${p.id}`} className="flex items-center gap-3 rounded-2xl border border-[#e6def5] bg-[#f6f2fc] px-4 py-3">
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#8b5cf6] text-sm text-white">◆</span>
       <span className="font-semibold text-[#5b3aa6]">{fmt(p.date)} · {p.label}</span>
-      <button type="button" onClick={() => onDeleteProgram(p.id)} className="ml-auto shrink-0 text-xs text-stone-400 hover:text-stone-600">삭제</button>
+      <button type="button" onClick={() => handleDeleteProgram(p.id)} className="ml-auto shrink-0 text-xs text-stone-400 hover:text-stone-600">삭제</button>
     </li>
   )
 
@@ -59,7 +81,7 @@ export function SessionsView({
       finalTime={s.finalTime}
       topics={s.topics}
       materials={s.materials}
-      members={members}
+      members={orderedMembers}
       isAdmin={members.find((m) => m.id === myId)?.isAdmin ?? false}
       onAddMaterial={onAddMaterial}
       onRemoveMaterial={onRemoveMaterial}
@@ -104,7 +126,7 @@ export function SessionsView({
         )}
       </div>
 
-      {upcoming.length === 0 && upcomingPrograms.length === 0 ? (
+      {upcoming.length === 0 && visibleUpcomingPrograms.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-stone-200 px-4 py-10 text-center text-sm text-stone-400">
           아직 잡힌 세션이 없어요.<br />4명이 &ldquo;하자&rdquo;하면 여기 떠요.
         </div>
@@ -125,11 +147,11 @@ export function SessionsView({
               {openDate === s.date && panel(s)}
             </li>
           ))}
-          {upcomingPrograms.map(programItem)}
+          {visibleUpcomingPrograms.map(programItem)}
         </ul>
       )}
 
-      {(past.length > 0 || pastPrograms.length > 0) && (
+      {(past.length > 0 || visiblePastPrograms.length > 0) && (
         <>
           <h3 className="mb-2 mt-8 text-sm font-semibold text-stone-400">지난 세션</h3>
           <ul className="space-y-1">
@@ -147,7 +169,7 @@ export function SessionsView({
                 {openDate === s.date && panel(s)}
               </li>
             ))}
-            {pastPrograms.map(programItem)}
+            {visiblePastPrograms.map(programItem)}
           </ul>
         </>
       )}

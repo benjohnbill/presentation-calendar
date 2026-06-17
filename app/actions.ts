@@ -76,14 +76,14 @@ export async function commit(
   date: string,
   window: { start: string | null; end: string | null },
 ) {
-  // Commit ⊆ Available: ensure availability exists
-  await db.insert(availabilities).values({ memberId, date }).onConflictDoNothing()
-
-  // Distinguish a NEW committer (potential late join) from an existing one editing their time.
-  const existing = await db
-    .select()
-    .from(commits)
-    .where(and(eq(commits.memberId, memberId), eq(commits.date, date)))
+  // Commit ⊆ Available: ensure availability exists. In parallel, read whether
+  // this member had already committed — distinguishing a NEW committer
+  // (potential late join) from an existing one editing their time. The two are
+  // independent (write to availabilities, read from commits).
+  const [, existing] = await Promise.all([
+    db.insert(availabilities).values({ memberId, date }).onConflictDoNothing(),
+    db.select().from(commits).where(and(eq(commits.memberId, memberId), eq(commits.date, date))),
+  ])
   const isNewCommitter = existing.length === 0
 
   await db
@@ -94,8 +94,11 @@ export async function commit(
       set: { timeStart: window.start, timeEnd: window.end },
     })
 
-  const comm = await db.select().from(commits).where(eq(commits.date, date))
-  const sess = await db.select().from(sessions).where(eq(sessions.date, date))
+  // Re-read the now-updated committers alongside any existing session.
+  const [comm, sess] = await Promise.all([
+    db.select().from(commits).where(eq(commits.date, date)),
+    db.select().from(sessions).where(eq(sessions.date, date)),
+  ])
   const sessionExisted = sess.length > 0
 
   if (shouldCreateSession({ commitCount: comm.length, sessionExists: sessionExisted })) {

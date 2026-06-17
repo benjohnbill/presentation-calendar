@@ -1,8 +1,9 @@
 'use client'
-import { useRef, useState } from 'react'
+import { useOptimistic, useRef, useState, useTransition } from 'react'
 import { DateDetail } from './DateDetail'
 import { ClockIcon } from './icons'
 import { SNAP_MS, SNAP_EASE, settleIndex } from '@/lib/swipe'
+import { applyOptimistic } from '@/lib/timetable'
 
 type Member = { id: number; name: string }
 type CommitRow = { memberId: number; timeStart: string | null; timeEnd: string | null }
@@ -39,6 +40,26 @@ export function TimetableCarousel({
   const [animating, setAnimating] = useState(false)
   const drag = useRef<{ x0: number; y0: number; active: boolean; lastX: number; lastT: number; vx: number } | null>(null)
   const vpRef = useRef<HTMLDivElement>(null)
+
+  // Optimistic commits: a tap on "하자 (참석)" / "시간 수정" / "참석 취소" updates the
+  // local day data (and overlap band) instantly, then the server action runs
+  // inside the transition; when it revalidates, the real props take over. This
+  // hides the full server round-trip the action would otherwise block on.
+  const [optimisticDays, addOptimistic] = useOptimistic(days, applyOptimistic)
+  const [, startTransition] = useTransition()
+
+  const handleCommit = (date: string, window: { start: string | null; end: string | null }) => {
+    startTransition(async () => {
+      addOptimistic({ type: 'commit', date, memberId: myId, window })
+      await onCommit(date, window)
+    })
+  }
+  const handleUncommit = (date: string) => {
+    startTransition(async () => {
+      addOptimistic({ type: 'uncommit', date, memberId: myId })
+      await onUncommit(date)
+    })
+  }
 
   if (days.length === 0) {
     return (
@@ -147,7 +168,7 @@ export function TimetableCarousel({
             transition: animating ? `transform ${SNAP_MS}ms ${SNAP_EASE}` : 'none',
           }}
         >
-          {days.map((day, i) => (
+          {optimisticDays.map((day, i) => (
             <div key={day.date} className="w-full shrink-0 px-0.5" inert={i !== cur}>
               <DateDetail
                 date={day.date}
@@ -158,8 +179,8 @@ export function TimetableCarousel({
                 myId={myId}
                 colorMap={colorMap}
                 inkMap={inkMap}
-                onCommit={(w) => onCommit(day.date, w)}
-                onUncommit={() => onUncommit(day.date)}
+                onCommit={(w) => handleCommit(day.date, w)}
+                onUncommit={() => handleUncommit(day.date)}
                 onAddTopic={(t) => onAddTopic(day.date, t)}
               />
             </div>
