@@ -2,13 +2,13 @@
 
 import { db } from '@/db/client'
 import { availabilities, commits, sessions, notifications, members, topics, materials } from '@/db/schema'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { after } from 'next/server'
 import { shouldFireProvisional, shouldCreateSession } from '@/domain/thresholds'
 import { computeSuggestedTime } from '@/domain/suggestedTime'
 import { formatWindow } from '@/domain/time'
-import { buildProvisional, buildSessionCreated, buildLateJoin } from '@/notify/messages'
+import { buildProvisional, buildSessionCreated, buildLateJoin, buildCancelled } from '@/notify/messages'
 import { postToDiscord } from '@/notify/discord'
 
 function dateUrl(date: string) {
@@ -153,4 +153,30 @@ export async function removeMaterial(id: number) {
 export async function setFinalTime(date: string, time: string | null) {
   await db.update(sessions).set({ finalTime: time }).where(eq(sessions.date, date))
   revalidatePath('/')
+}
+
+// Admin-only. Cancels a created Session per ADR 0002: notify committers, then revert the date
+// (delete session + commits + this date's session_created/reminder notifications) so it can
+// reform later. Availability and topics are kept; the date falls back to provisional.
+export async function cancelSession(memberId: number, date: string) {
+  const actor = await db.select().from(members).where(eq(members.id, memberId))
+  if (!actor[0]?.isAdmin) throw new Error('Only the admin can cancel a session')
+
+  // Gather committers for the notification BEFORE purging.
+  const comm = await db.select().from(commits).where(eq(commits.date, date))
+  const all = await db.select().from(members)
+  const byId = new Map(all.map((m) => [m.id, m]))
+  const mentionIds = comm.map((c) => byId.get(c.memberId)?.discordId).filter(Boolean) as string[]
+
+  await db.delete(sessions).where(eq(sessions.date, date))
+  await db.delete(commits).where(eq(commits.date, date))
+  await db
+    .delete(notifications)
+    .where(and(eq(notifications.date, date), inArray(notifications.eventType, ['session_created', 'reminder'])))
+
+  revalidatePath('/')
+
+  after(async () => {
+    await postToDiscord(buildCancelled({ date, mentionIds, url: dateUrl(date) }))
+  })
 }
