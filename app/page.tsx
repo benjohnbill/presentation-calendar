@@ -1,4 +1,4 @@
-import { getMembers, getAvailabilityByDates, getSessionDates, getDateDetail, getTopicsByDates, getMaterialsByDates } from '@/data/queries'
+import { getMembers, getAvailabilityByDates, getSessionDates, getDateDetail, getTopicsByDates, getMaterialsByDates, getPrograms } from '@/data/queries'
 import { computeSuggestedTime } from '@/domain/suggestedTime'
 import { THRESHOLD } from '@/domain/thresholds'
 import { monthAnchors, monthWindowDates, todayKst } from '@/lib/calendar'
@@ -40,9 +40,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
   )
 
   const sessionDates = sessionRows.map((s) => s.date)
-  const [allTopics, allMaterials] = await Promise.all([
+  const [allTopics, allMaterials, allPrograms] = await Promise.all([
     getTopicsByDates(sessionDates),
     getMaterialsByDates(sessionDates),
+    getPrograms(),
   ])
   const toRecord = (s: (typeof sessionRows)[number]) => ({
     date: s.date,
@@ -55,6 +56,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
   const upcoming = sessionRows.filter((s) => s.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).map(toRecord)
   const past = sessionRows.filter((s) => s.date < todayStr).sort((a, b) => b.date.localeCompare(a.date)).map(toRecord)
 
+  const programDates = allPrograms.map((p) => p.date)
+  const upcomingPrograms = allPrograms.filter((p) => p.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date))
+  const pastPrograms = allPrograms.filter((p) => p.date < todayStr).sort((a, b) => b.date.localeCompare(a.date))
+
   return (
     <AppShell
       members={members}
@@ -66,6 +71,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ d
       timetableDays={timetableDays}
       upcoming={upcoming}
       past={past}
+      upcomingPrograms={upcomingPrograms}
+      pastPrograms={pastPrograms}
+      programDates={programDates}
     />
   )
 }

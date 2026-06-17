@@ -8,11 +8,12 @@ import { TimetableCarousel } from './TimetableCarousel'
 import { SessionsView } from './SessionsView'
 import type { SessionRecord } from './SessionsView'
 import { CalendarIcon, ClockIcon, CheckCircleIcon } from './icons'
-import { applyAvailability, commit, uncommit, addTopic, addMaterial, removeMaterial, setFinalTime, cancelSession } from '../actions'
+import { applyAvailability, commit, uncommit, addTopic, addMaterial, removeMaterial, setFinalTime, cancelSession, createProgram, deleteProgram } from '../actions'
 import type { MonthAnchor } from '@/lib/calendar'
 import { buildColorMap, buildInkMap } from '@/lib/calendar'
 
 type Member = { id: number; name: string; isAdmin: boolean }
+type ProgramRow = { id: number; date: string; hostId: number; label: string; note: string | null }
 type View = 'agree' | 'timetable' | 'sessions'
 
 const NAV: { key: View; label: string; Icon: ComponentType<{ className?: string }> }[] = [
@@ -36,6 +37,9 @@ export function AppShell(props: {
   }[]
   upcoming: SessionRecord[]
   past: SessionRecord[]
+  upcomingPrograms: ProgramRow[]
+  pastPrograms: ProgramRow[]
+  programDates: string[]
 }) {
   const router = useRouter()
   const { id: myId, ready, pick } = useIdentity()
@@ -90,6 +94,7 @@ export function AppShell(props: {
             await applyAvailability(myId, adds, removes)
           }}
           onOpenTimetable={goTimetable}
+          programDates={new Set(props.programDates)}
         />
       )}
 
@@ -125,6 +130,10 @@ export function AppShell(props: {
           onRemoveMaterial={removeMaterial}
           onSetFinalTime={setFinalTime}
           onCancelSession={async (date) => { await cancelSession(myId, date) }}
+          upcomingPrograms={props.upcomingPrograms}
+          pastPrograms={props.pastPrograms}
+          onCreateProgram={async (date: string, label: string, note: string | null) => { await createProgram(myId, date, label, note) }}
+          onDeleteProgram={deleteProgram}
         />
       )}
     </>
