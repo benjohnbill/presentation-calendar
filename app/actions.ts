@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/db/client'
-import { availabilities, commits, sessions, notifications, members, topics, materials } from '@/db/schema'
+import { availabilities, commits, sessions, notifications, members, topics, materials, programs } from '@/db/schema'
 import { and, eq, inArray } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { after } from 'next/server'
@@ -158,6 +158,16 @@ export async function setFinalTime(date: string, time: string | null) {
 // Admin-only. Cancels a created Session per ADR 0002: notify committers, then revert the date
 // (delete session + commits + this date's session_created/reminder notifications) so it can
 // reform later. Availability and topics are kept; the date falls back to provisional.
+export async function createProgram(hostId: number, date: string, label: string, note: string | null) {
+  await db.insert(programs).values({ hostId, date, label, note })
+  revalidatePath('/')
+}
+
+export async function deleteProgram(id: number) {
+  await db.delete(programs).where(eq(programs.id, id))
+  revalidatePath('/')
+}
+
 export async function cancelSession(memberId: number, date: string) {
   const actor = await db.select().from(members).where(eq(members.id, memberId))
   if (!actor[0]?.isAdmin) throw new Error('Only the admin can cancel a session')

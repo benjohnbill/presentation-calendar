@@ -1,5 +1,5 @@
 import { db } from '@/db/client'
-import { members, availabilities, commits, sessions, topics, materials } from '@/db/schema'
+import { members, availabilities, commits, sessions, topics, materials, programs } from '@/db/schema'
 import { eq, inArray } from 'drizzle-orm'
 
 export async function getMembers() {
@@ -33,4 +33,8 @@ export async function getTopicsByDates(dates: string[]) {
 export async function getMaterialsByDates(dates: string[]) {
   if (dates.length === 0) return [] as (typeof materials.$inferSelect)[]
   return db.select().from(materials).where(inArray(materials.date, dates))
+}
+
+export async function getPrograms() {
+  return db.select().from(programs)
 }
