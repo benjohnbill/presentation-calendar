@@ -155,9 +155,6 @@ export async function setFinalTime(date: string, time: string | null) {
   revalidatePath('/')
 }
 
-// Admin-only. Cancels a created Session per ADR 0002: notify committers, then revert the date
-// (delete session + commits + this date's session_created/reminder notifications) so it can
-// reform later. Availability and topics are kept; the date falls back to provisional.
 export async function createProgram(hostId: number, date: string, label: string, note: string | null) {
   await db.insert(programs).values({ hostId, date, label, note })
   revalidatePath('/')
@@ -168,6 +165,9 @@ export async function deleteProgram(id: number) {
   revalidatePath('/')
 }
 
+// Admin-only. Cancels a created Session per ADR 0002: notify committers, then revert the date
+// (delete session + commits + this date's session_created/reminder notifications) so it can
+// reform later. Availability and topics are kept; the date falls back to provisional.
 export async function cancelSession(memberId: number, date: string) {
   const actor = await db.select().from(members).where(eq(members.id, memberId))
   if (!actor[0]?.isAdmin) throw new Error('Only the admin can cancel a session')
