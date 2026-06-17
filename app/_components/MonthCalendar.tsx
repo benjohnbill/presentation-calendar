@@ -14,6 +14,7 @@ type Props = {
   colorMap: Record<number, string>
   inkMap: Record<number, string>
   sessionDates: Set<string>
+  programDates: Set<string>
   myId: number
   // Apply a batch of pending changes (one round-trip). adds/removes are date strings.
   onApply: (adds: string[], removes: string[]) => Promise<void>
@@ -44,7 +45,7 @@ type Gesture = {
 }
 
 export function MonthCalendar({
-  anchors, today, availByDate, members, colorMap, inkMap, sessionDates, myId, onApply, onOpenTimetable,
+  anchors, today, availByDate, members, colorMap, inkMap, sessionDates, programDates, myId, onApply, onOpenTimetable,
 }: Props) {
   const [monthIdx, setMonthIdx] = useState(0)
   const [pending, setPending] = useState<Map<string, Diff>>(new Map())
@@ -201,6 +202,7 @@ export function MonthCalendar({
     const isPast = d < today
     const isToday = d === today
     const isSession = sessionDates.has(d)
+    const isProgram = programDates.has(d)
     const pState = pending.get(d)
     const showMine = effectiveMine(d)
     const count = ids.length
@@ -253,6 +255,8 @@ export function MonthCalendar({
             <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-accent text-[9px] font-bold leading-none text-white">+</span>
           ) : pState === 'remove' ? (
             <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-stone-400 text-[9px] font-bold leading-none text-white">−</span>
+          ) : isProgram ? (
+            <span className="text-[10px] text-[#8b5cf6]">◆</span>
           ) : isSession ? (
             <span className="text-[10px] text-accent">✓</span>
           ) : null}
