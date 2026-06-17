@@ -220,7 +220,22 @@ export function MonthCalendar({
         ? 'border-stone-300 bg-stone-100/70 ring-1 ring-stone-200'
         : isPast
           ? 'border-[#ececef] bg-[#f0f0f2]'
-          : 'border-hairline bg-white'
+          : isProgram
+            ? 'border-[#e6def5] bg-[#f6f2fc]' // program promo tint (matches the 다가오는 세션 program rows)
+            : 'border-hairline bg-white'
+
+    // Emphasis ring, in priority order: a program shouts loudest (promo), then a
+    // confirmed session, then a "hot" (4+ available) day. Muted while the cell
+    // has a pending add/remove so the selection state stays legible.
+    const emphasis = pState
+      ? ''
+      : isProgram
+        ? 'ring-2 ring-[#8b5cf6]'
+        : isSession
+          ? 'ring-2 ring-accent'
+          : hot && !isPast
+            ? 'ring-1 ring-accent'
+            : ''
 
     return (
       <div
@@ -236,9 +251,7 @@ export function MonthCalendar({
             toggleSingle(d)
           }
         }}
-        className={`group relative flex min-h-[58px] flex-col rounded-lg border p-1 transition sm:min-h-[88px] ${stateRing} ${
-          hot && !isPast && !pState ? 'ring-1 ring-accent' : ''
-        } ${isSession && !pState ? 'ring-2 ring-accent' : ''} ${isPast ? 'cursor-default' : 'cursor-pointer'}`}
+        className={`group relative flex min-h-[58px] flex-col rounded-lg border p-1 transition sm:min-h-[88px] ${stateRing} ${emphasis} ${isPast ? 'cursor-default' : 'cursor-pointer'}`}
       >
         <div className="mb-0.5 flex items-center justify-between">
           <span
@@ -256,7 +269,7 @@ export function MonthCalendar({
           ) : pState === 'remove' ? (
             <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-stone-400 text-[9px] font-bold leading-none text-white">−</span>
           ) : isProgram ? (
-            <span className="text-[10px] text-[#8b5cf6]">◆</span>
+            <span className="text-[11px] leading-none text-[#8b5cf6] sm:text-xs">◆</span>
           ) : isSession ? (
             <span className="text-[10px] text-accent">✓</span>
           ) : null}
